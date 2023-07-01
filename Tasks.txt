@@ -2,5 +2,4 @@ Que base de datos usar?
 Recieve from
 ChordNode.run() 
 como distribuir la base de datos en la red chord
-como saber donde esta una informacion determinada en la base de datos
 Estructura de los mensajes que se envian

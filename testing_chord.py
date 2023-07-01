@@ -1,5 +1,5 @@
 from channel import *
-from address import Address
+from utils import *
 
 
 channel = Channel(Address("*","5555")) 

@@ -1,22 +1,26 @@
 import zmq
 import random, math
 from constChord import * 
-from address import Address
 import json
-import hashlib
+from utils import *
+
 
 class Channel:
 
-  def __init__(self,address,nBits=5):
+  def __init__(self,address:Address,nBits=160):
     self.members = {}
     self.nBits = nBits
     self.MAXPROC = pow(2, nBits)
     self.address = address
+    self.nodes_ID=[]
 
-  def join(self,address):
-    newpid = random.choice(list(set([str(i) for i in range(self.MAXPROC)]) - set(self.members.keys())))
+  def join(self,ip,port):
+    address = Address(ip,port)
+    newpid = hash_key(str(address))  ##cambiar por el ip !!!!!!!!!!!!!!!!!!!!
+    self.nodes_ID.append(newpid)
+    self.nodes_ID.sort
     self.members[newpid] = address
-    print(f'Node {newpid} joined to chord, with address {address}')
+    print(f'Node {newpid} joined to chord, with address {str(address)}')
     return newpid
 
   def exists(self,pid):
@@ -26,14 +30,6 @@ class Channel:
     assert pid in self.members.keys(), ''
     self.members.keys.remove(pid) 
 
-  def hash_key(key: str) -> int:
-    """
-    Función de hash que calcula el hash SHA-1 de una cadena de caracteres y devuelve un número entero que se utiliza como la clave del nodo en la red Chord.
-    """
-    sha1 = hashlib.sha1(key.encode('utf-8'))
-    hash_value = int(sha1.hexdigest(), 16) # convierte el hash SHA-1 en un número entero
-    return hash_value
-
   
   def run(self):
 
@@ -41,14 +37,19 @@ class Channel:
     socket = context.socket(zmq.REP)
     socket.bind(str(self.address))
 
-    message = socket.recv()
-    data=json.loads(message.decode("utf-8"))
-    message=data["message"]
-    address = data["address"]
-    print("Received request: %s" % message)
+    while True:
+      message = socket.recv()
+      data=json.loads(message.decode("utf-8"))
+      message=data["message"]
+      ip = data["ip"]
+      port = data["port"]
+      print("Received request: %s" % message)
 
-    if message == JOIN:
-      data = {"nodeID": self.join(address), "nBits": self.nBits}
-      message = json.dumps(data).encode("utf-8")
-      socket.send(message)
-      #socket.send_string(str(self.join(address)))        
+      if message == JOIN:
+        new_id = self.join(ip,port)
+        nodes_address= [ (self.members[id].ip,self.members[id].port) for id in self.nodes_ID ]
+        
+        data = {"nodeID": new_id, "nBits": self.nBits,"nodes_ID":self.nodes_ID,"addresses": nodes_address}
+        message = json.dumps(data).encode("utf-8")
+        socket.send(message)
+        #socket.send_string(str(self.join(address)))
