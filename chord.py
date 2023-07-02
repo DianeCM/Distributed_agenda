@@ -18,6 +18,7 @@ class ChordNode:
         self.FT = None
         self.MAXPROC = 0 
         self.node_address = {}
+        self.join()
     
     def inbetween(self, key, lwb, upb):                                         
         if lwb <= upb:                                                            
@@ -39,15 +40,17 @@ class ChordNode:
         succ = (self.nodeID + pow(2, i-1)) % self.MAXPROC    # succ(p+2^(i-1))
         lwbi = self.nodeSet.index(self.nodeID)               # own index in nodeset
         upbi = (lwbi + 1) % len(self.nodeSet)                # index next neighbor
-        for k in range(len(self.nodeSet)):                   # go through all segments
+        for _ in range(len(self.nodeSet)):                   # go through all segments
             if self.inbetween(succ, self.nodeSet[lwbi]+1, self.nodeSet[upbi]+1):
                 return self.nodeSet[upbi]                        # found successor
             (lwbi,upbi) = (upbi, (upbi+1) % len(self.nodeSet)) # go to next segment
         return None                                                                
     
     def recomputeFingerTable(self):
-        self.FT[0]  = self.nodeSet[self.nodeSet.index(self.nodeID)-1] # Predecessor
-        self.FT[1:] = [self.finger(i) for i in range(1,self.nBits+1)] # Successors
+        if len(self.nodeSet) > 1:
+            self.FT[0]  = self.nodeSet[self.nodeSet.index(self.nodeID)-1] # Predecessor
+            self.FT[1:] = [self.finger(i) for i in range(1,self.nBits+1)] # Successors
+        elif len(self.nodeSet)  == 1: self.FT = [self.nodeSet[0] for i in range(1,self.nBits+1)]
 
     def localSuccNode(self, key): 
         if self.inbetween(key, self.FT[0]+1, self.nodeID+1): # key in (FT[0],self]
@@ -99,28 +102,49 @@ class ChordNode:
         #Computing Finger Table
         self.recomputeFingerTable()
         print("Finger Table %s " % (self.FT))
-
-        #Notify other nodes
     
     def run(self):
         #Receiving requests
         while True:
             context = zmq.Context()
-            socket = context.socket(zmq.REQ)
+            socket = context.socket(zmq.REP)
             message = socket.recv()
             data=json.loads(message.decode("utf-8"))
             request = data["message"]
             ip = data["ip"]
             port = data["port"]
-            if request[0] == STOP: 
+            
+            if request == STOP: 
                 break 
-            if request[0] == LOOKUP_REQ:                       # A lookup request #-
-                nextID = self.localSuccNode(request[1])          # look up next node #-
-                socket = context.socket(zmq.REQ)
-                socket.connect(str(self.chan_address))
-                data = {"message": (LOOKUP_REQ,request[1]), "address": str(self.node_address[nextID])} # send to succ #-
-                if not self.chan.exists(nextID):
-                    self.delNode(nextID) 
+            if request == LOOKUP_REQ:                       # A lookup request #-
+                key = data["key"]
+                nextID = self.localSuccNode(key)          # look up next node #-
+
+                if not nextID == self.nodeID : 
+
+                    #asking next node for the key 
+                    socket_req = context.socket(zmq.REQ)
+                    socket_req.connect(str(self.node_address[nextID]))
+                    data = {"message": LOOKUP_REQ, "ip": ip , "port": port, "key": key} # send to succ #-
+                    message = json.dumps(data).encode("utf-8")
+                    socket_req.send(message)
+                    #message = socket_req.recv()
+                    #data = json.loads(message.decode("utf-8"))    
+                    #nextID = data["node"]
+                else : 
+                    # sending reply 
+                    socket_req = context.socket(zmq.REQ)
+                    socket_req.connect(f"tcp://{ip}:{port}")
+                    data = {"message": LOOKUP_REP, "ip": self.address.ip , "port": self.address.port, "node":  nextID}
+                    message = json.dumps(data).encode("utf-8")
+                    socket.send(message)
+            if request == LOOKUP_REP:
+                socket_req = context.socket(zmq.REQ)
+                socket_req.connect(self.chan_address)
+                node = data["node"]
+                data = {"message": LOOKUP_REP, "ip": self.address.ip , "port": self.address.port, "node":  node}
+                message = json.dumps(data).encode("utf-8")
+                socket.send(message)      
 
 
 node= ChordNode(Address("localhost","5555"),Address("localhost","5270"))

@@ -18,7 +18,7 @@ class Channel:
     address = Address(ip,port)
     newpid = hash_key(str(address))  ##cambiar por el ip !!!!!!!!!!!!!!!!!!!!
     self.nodes_ID.append(newpid)
-    self.nodes_ID.sort
+    self.nodes_ID.sort()
     self.members[newpid] = address
     print(f'Node {newpid} joined to chord, with address {str(address)}')
     return newpid
@@ -30,7 +30,22 @@ class Channel:
     assert pid in self.members.keys(), ''
     self.members.keys.remove(pid) 
 
-  
+  def lookup_key(self,key):
+      while True:
+        print("hallo") 
+        if len(self.nodes_ID) > 0:
+            node = random.choice(self.nodes_ID)
+            context = zmq.Context()
+            socket = context.socket(zmq.REQ)
+            #self.socket.bind(str(self.address))
+            socket.connect(self.members[node])
+        
+            #Send a message to join to the network
+            print("Sending Look up key request")
+            data = {"message": LOOKUP_REQ, "ip": self.address.ip , "port": self.address.port , "key":key}
+            message = json.dumps(data).encode("utf-8")
+            socket.send(message)
+
   def run(self):
 
     context = zmq.Context()
@@ -48,8 +63,23 @@ class Channel:
       if message == JOIN:
         new_id = self.join(ip,port)
         nodes_address= [ (self.members[id].ip,self.members[id].port) for id in self.nodes_ID ]
-        
+        print(self.nodes_ID)
         data = {"nodeID": new_id, "nBits": self.nBits,"nodes_ID":self.nodes_ID,"addresses": nodes_address}
         message = json.dumps(data).encode("utf-8")
         socket.send(message)
         #socket.send_string(str(self.join(address)))
+      if message == LOOKUP_REQ and len(self.nodes_ID)>0:
+        key = data[key]
+        node = random.choice(self.nodes_ID)
+        context = zmq.Context()
+        socket = context.socket(zmq.REQ)
+        #self.socket.bind(str(self.address))
+        socket.connect(self.members[node])
+        
+        #Send a message to join to the network
+        print("Sending Look up key request")
+        data = {"message": LOOKUP_REQ, "ip": self.address.ip , "port": self.address.port , "key":key}
+        message = json.dumps(data).encode("utf-8")
+        socket.send(message)
+
+    
