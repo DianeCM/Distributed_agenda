@@ -18,6 +18,12 @@ class ChordNode:
         self.FT = None
         self.MAXPROC = 0 
         self.node_address = {}
+       
+        #initializing sockets
+        self.context = zmq.Context()
+        self.consumer_receiver = self.context.socket(zmq.PULL)
+        self.consumer_receiver.bind(str(self.address))
+
         self.join()
     
     def inbetween(self, key, lwb, upb):                                         
@@ -64,21 +70,19 @@ class ChordNode:
 
     def join(self):
 
-        print("Connecting to Channel Server")
-        context = zmq.Context()
-        socket = context.socket(zmq.REQ)
-        #self.socket.bind(str(self.address))
-        socket.connect(str(self.chan_address))
-        
+        print("Connecting to Channel Server") 
+        consumer_sender = self.context.socket(zmq.PUSH)
+        consumer_sender.connect(str(self.chan_address))
+
         #Send a message to join to the network
         print("Sending Message")
         data = {"message": JOIN, "ip": self.address.ip , "port": self.address.port}
-        message = json.dumps(data).encode("utf-8")
-        socket.send(message)
+        consumer_sender.send_json(data)
+        consumer_sender.close()
 
         #  Get the reply.
-        message = socket.recv()
-        data=json.loads(message.decode("utf-8"))
+
+        data = self.consumer_receiver.recv_json()
 
         #unpacking data
         self.nodeID =data["nodeID"]
@@ -93,7 +97,6 @@ class ChordNode:
         #building node_address dict
         self.node_address = {self.nodeSet[i]:Address(addresses[i][0],addresses[i][1]) for i in range(len(self.nodeSet))}
 
-
         self.MAXPROC = pow(2, self.nBits)
 
         #Inicializing Finger Table
@@ -106,10 +109,10 @@ class ChordNode:
     def run(self):
         #Receiving requests
         while True:
-            context = zmq.Context()
-            socket = context.socket(zmq.REP)
-            message = socket.recv()
-            data=json.loads(message.decode("utf-8"))
+
+            data = self.consumer_receiver.recv_json()
+
+            #unpacking data
             request = data["message"]
             ip = data["ip"]
             port = data["port"]
@@ -119,46 +122,38 @@ class ChordNode:
             if request == LOOKUP_REQ:                       # A lookup request #-
                 key = data["key"]
                 nextID = self.localSuccNode(key)          # look up next node #-
-
-                if not nextID == self.nodeID : 
-
-                    #asking next node for the key 
-                    socket_req = context.socket(zmq.REQ)
-                    socket_req.connect(str(self.node_address[nextID]))
-                    data = {"message": LOOKUP_REQ, "ip": ip , "port": port, "key": key} # send to succ #-
-                    message = json.dumps(data).encode("utf-8")
-                    socket_req.send(message)
-                    #message = socket_req.recv()
-                    #data = json.loads(message.decode("utf-8"))    
-                    #nextID = data["node"]
-                else : 
-                    # sending reply 
-                    socket_req = context.socket(zmq.REQ)
-                    socket_req.connect(f"tcp://{ip}:{port}")
-                    data = {"message": LOOKUP_REP, "ip": self.address.ip , "port": self.address.port, "node":  nextID}
-                    message = json.dumps(data).encode("utf-8")
-                    socket.send(message)
+                consumer_sender = self.context.socket(zmq.PUSH)
+                if not nextID == self.nodeID :
+                    consumer_sender.connect(str(self.node_address[nextID]))
+                    data = {"message": LOOKUP_REQ, "ip": ip , "port": port, "key": key} # send to succ
+                    consumer_sender.send_json(data)
+                else :
+                    consumer_sender.connect(f"tcp://{ip}:{port}")
+                    data = {"message": LOOKUP_REP, "ip": self.address.ip , "port": self.address.port, "node":  nextID,"key":key}
+                    consumer_sender.send_json(data)
+                consumer_sender.close()
             if request == LOOKUP_REP:
-                socket_req = context.socket(zmq.REQ)
-                socket_req.connect(self.chan_address)
+                consumer_sender.connect(str(self.chan_address))
                 node = data["node"]
-                data = {"message": LOOKUP_REP, "ip": self.address.ip , "port": self.address.port, "node":  node}
-                message = json.dumps(data).encode("utf-8")
-                socket.send(message)      
+                data = {"message": LOOKUP_REP, "ip": self.address.ip , "port": self.address.port, "node": node , "key":key}
+                consumer_sender.send_json(data)
+                consumer_sender.close()
+
+node= ChordNode(Address("127.0.0.1","5555"),Address("127.0.0.1","5270"))
+thread = threading.Thread(target=node.run)
+
+node1= ChordNode(Address("127.0.0.1","5555"),Address("127.0.0.1","8888"))
+thread1 = threading.Thread(target=node1.run)
+
+node2= ChordNode(Address("127.0.0.1","5555"),Address("127.0.0.1","49152"))
+thread2 = threading.Thread(target=node2.run)
 
 
-node= ChordNode(Address("localhost","5555"),Address("localhost","5270"))
-mi_hilo = threading.Thread(target=node.join())
+node3= ChordNode(Address("127.0.0.1","5555"),Address("127.0.0.1","8000"))
+thread3 = threading.Thread(target=node2.run)
 
-time.sleep(2)
-node= ChordNode(Address("localhost","5555"),Address("localhost","8888"))
-mi_hilo = threading.Thread(target=node.join())
-
-time.sleep(2)
-node= ChordNode(Address("localhost","5555"),Address("localhost","49152"))
-mi_hilo = threading.Thread(target=node.join())
-
-time.sleep(2)
-node= ChordNode(Address("localhost","5555"),Address("localhost","8000"))
-mi_hilo = threading.Thread(target=node.join())
+thread.start()
+thread1.start()
+thread2.start()
+thread3.start()
 
