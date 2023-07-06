@@ -17,8 +17,8 @@ class Channel:
     #initializing sockets
     context = zmq.Context()
     # recieve work
-    self.consumer_receiver = context.socket(zmq.PULL)
-    self.consumer_receiver.bind(str(self.address))
+    self.receiver = context.socket(zmq.PULL)
+    self.receiver.bind(str(self.address))
 
   def join(self,ip,port):
     address = Address(ip,port)
@@ -57,7 +57,7 @@ class Channel:
     while True:
 
       #getting request
-      data = self.consumer_receiver.recv_json()
+      data = self.receiver.recv_json()
       #data=json.loads(message.decode("utf-8"))
 
       #unpacking data 

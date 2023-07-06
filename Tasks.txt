@@ -1,5 +1,17 @@
 Que base de datos usar?
-Recieve from
-ChordNode.run() 
 como distribuir la base de datos en la red chord
 Estructura de los mensajes que se envian
+
+metodo para cuando falle el lider 
+caso en que falla el sucesor
+probar que se inicien todos los servidores a la vez
+Q hacer cuando ninguno de los que respondio era el lider
+Establecer puertos por defecto en la clase address 
+union de un nodo cuando otro no ha terminado de descubir toda la red 
+comenzar a correr el hilo de discover_request desde que se inicia el nodo 
+update_data
+agregar puerto para pedir los nodos cuando es el lider
+Look_up response se debe enviar al nodo que hizo el request o directamente al cliente ??
+verificar si el sucesor es el que tiene la llave 
+actualizar lista de nodos solo cuando se chequea y no cuando se une 
+Si un lider le escribe a otro lider
