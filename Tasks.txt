@@ -15,3 +15,4 @@ Look_up response se debe enviar al nodo que hizo el request o directamente al cl
 verificar si el sucesor es el que tiene la llave 
 actualizar lista de nodos solo cuando se chequea y no cuando se une 
 Si un lider le escribe a otro lider
+Problema con la conssitencia al llegar un nodo nuevo 

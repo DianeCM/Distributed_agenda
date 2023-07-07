@@ -11,19 +11,71 @@ receiver = context.socket(zmq.PULL)
 receiver.bind("tcp://127.0.0.1:5557")
     # send work
 consumer_sender = context.socket(zmq.PUSH)
-consumer_sender.connect("tcp://127.0.0.1:5123")
-        
-key = random.randint(915774693674738982705217759031541721583339531624,pow(2,160))
-#Send a message to join to the network
-data = {"message": LOOKUP_REQ, "ip":"127.0.0.1" , "port": "5557", "key": key }
-#message = json.dumps(data).encode("utf-8")
-print(f"Sending LOOKUP_REQ of {key} key")
-consumer_sender.send_json(data)
 
-time.sleep(10)
 
-data = receiver.recv_json()
-node = data["node"]
-ip = data["ip"]
-port = data["port"]
-print(f"Recieving LOOKUP_REP of {node} for {key} key, from {ip}:{port}")
+ports = ["5132","5123","5030","5050"]
+a = [0,686916772571941171600637909103417451352519039489, 794143421378275501213700159784909595755571930874,
+      865726554065021108825757911552689027386170761226, 915774693674738982705217759031541721583339531624,pow(2,160)]
+
+#for i in range(len(a)-1):
+#  for port in ports:
+#    key = random.randint(a[i],a[i+1])
+#    consumer_sender.connect(f"tcp://127.0.0.1:{port}")
+#
+#    print(f"Sending LOOKUP_REQ of {key} key to 127.0.0.1:{port}")
+#    consumer_sender.send_json(data)
+#
+#    time.sleep(10)
+#
+#    data = receiver.recv_json()
+#    node = data["node"]
+#    ip = data["ip"]
+#    port = data["port"]
+#    print(f"Recieving LOOKUP_REP of {node} for {key} key, from {ip}:{port}")
+
+pairs = []
+for i in range(len(a)-1):
+  for j,port in enumerate(ports):
+    key = random.randint(a[i],a[i+1])
+    value = random.randint(0,100)
+    pairs.append((key,value,j))
+    consumer_sender.connect(f"tcp://127.0.0.1:{port}")
+    data = {"message": SET_DATA_REQ, "ip":"127.0.0.1" , "port": "5557", "key": key , "value": value}
+
+    print(f"Sending SET_DATA_REQ of {key}:{value} key to 127.0.0.1:{port}")
+    consumer_sender.send_json(data)
+
+def check_value(key,expected_value,port):
+    consumer_sender.connect(f"tcp://127.0.0.1:{port}")
+    data = {"message": GET_DATA_REQ, "ip":"127.0.0.1" , "port": "5557", "key": key}
+
+    print(f"Sending GET_DATA_REQ of {key} key to 127.0.0.1:{port}")
+    consumer_sender.send_json(data)
+
+    time.sleep(10)
+
+    data = receiver.recv_json()
+    ip = data["ip"]
+    port = data["port"]
+    value = data["value"]
+    print(f"Recieving GET_DATA_REP of {key}:{value}, from {ip}:{port}")
+    assert  expected_value == value
+
+def check_replication():
+   time.sleep(10)
+   for pair in pairs:
+    key = pair[0]
+    value = pair[1]
+    port1 = ports[pair[2]]
+    port2  = ports[(pair[2]+1)%len(ports)]
+    check_value(key,value,port1)
+    print()
+    check_value(key,value,port2)
+
+check_replication()
+print("Successfull")
+
+    
+
+
+
