@@ -71,6 +71,7 @@ def check_replication():
     check_value(key,value,port1)
     print()
     check_value(key,value,port2)
+    print()
 
 check_replication()
 print("Successfull")

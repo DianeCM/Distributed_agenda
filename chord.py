@@ -162,6 +162,34 @@ class ChordNode:
         data = {"message": response,"ip": self.address.ip , "ports": self.address.ports , "nodeID": self.nodeID, "data":resp_data}
         return json.dumps(data).encode('utf-8')
 
+    def send_request(self,address,data):     
+            sender = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            try : sender.connect(address)
+            except ConnectionRefusedError as e :
+                sender.close()
+                return None
+                #print("Error de conexion :", e)
+                
+            # establecer un tiempo de espera de 10 segundos
+            sender.settimeout(10)
+            json_data = json.dumps(data).encode('utf-8')
+
+            #print("Sending Message")
+            sender.send(json_data)
+            try:
+                # Esperar la llegada de un mensaje
+                data = sender.recv(1024)
+                data = data.decode('utf-8')
+                data = json.loads(data) 
+                sender.close()
+                return data
+            except socket.timeout:
+                # Manejar la excepción si se agotó el tiempo de espera
+                print(colored("Tiempo de espera agotado para recibir un mensaje","red"))
+
+    def get_nodes(self,address):
+            data = {"message": GET_NODES, "ip": self.address.ip , "ports": self.address.ports, "nodeID": self.nodeID,"leader":self.nodeID}
+            data = self.send_request(str(self.node_address[self.leader]),data)
 
     # JOIN process
     def join(self):
@@ -190,29 +218,9 @@ class ChordNode:
 
         for address in self.possible_addresses:
             #print(f'Connecting to {address}') 
-            
-            sender = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            try :sender.connect(address)
-            except ConnectionRefusedError as e :
-                sender.close()
-                #print("Error de conexion :", e)    
-                continue
-
-            # establecer un tiempo de espera de 10 segundos
-            sender.settimeout(10)
-
             data = {"message": JOIN_REQ, "ip": self.address.ip , "ports": self.address.ports, "nodeID": self.nodeID}
-            json_data = json.dumps(data).encode('utf-8')
-
-            #print("Sending Message")
-            sender.send(json_data)
-
-            try:
-                # Esperar la llegada de un mensaje
-                data = sender.recv(1024)
-                data = data.decode('utf-8')
-                data = json.loads(data) 
-
+            data = self.send_request(address,data)
+            if data:
                 if data["message"] == JOIN_REP:
                     current_id = data["nodeID"]
                     leader = data["leader"]
@@ -224,7 +232,6 @@ class ChordNode:
                     print(f'Node {current_id} discovered')
 
                     if leader == current_id:
-                        sender.close()
                         #unpacking data
                         print(f'Leader found at node {current_id}')
                         return data["addresses"],data["nodes_ID"]
@@ -232,24 +239,16 @@ class ChordNode:
                     elif current_id > current_leader:
                         current_leader = current_id
                         leader_address = Address(ip,ports[0],ports[1])
-                        
-            except socket.timeout:
-                # Manejar la excepción si se agotó el tiempo de espera
-                #print("Tiempo de espera agotado para recibir un mensaje")
-                pass 
-            sender.close()
-                
-            
+                                   
         if leader_address == None:
                 print(f'No node found. Setting myself as leader')
                 discovered_nodes.sort()
                 self.leader = self.nodeID
                 thread = threading.Thread(target=self.leader_labor)
                 thread .start()
-
                 return discovered_addresses,discovered_nodes
             
-            #else: Q hacer cuando ninguno de los que respondio era el lider ?????????????????? 
+        #else: Q hacer cuando ninguno de los que respondio era el lider ?????????????????? 
 
     def update_data(self,get_data):
         
@@ -260,31 +259,11 @@ class ChordNode:
         update_method = self.initialize_data if get_data else self.replicate_data
 
         print(colored(f"Connecting to {receiver} : node {node}","blue"))
-        sender = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        try :sender.connect((self.node_address[node].ip,int(self.node_address[node].ports[1])))
-        except ConnectionRefusedError as e :
-                print("Error de conexion :", e)    
-                
-        # establecer un tiempo de espera de 10 segundos
-        sender.settimeout(10)
 
+        address = self.node_address[node].ip,int(self.node_address[node].ports[1])
         data = {"message": request, "ip": self.address.ip , "port": self.address.ports, "nodeID": self.nodeID}
         if get_data: data["startID"] = self.Predecessor
-        json_data = json.dumps(data).encode('utf-8')
-        sender.send(json_data)
-
-        try:
-                # Esperar la llegada de un mensaje
-                data = sender.recv(1024)
-                data = data.decode('utf-8')
-                data = json.loads(data) 
-
-        except socket.timeout:
-                # Manejar la excepción si se agotó el tiempo de espera
-                print("Tiempo de espera agotado para recibir un mensaje")
-                return
-       
-        
+        data = self.send_request(address,data)
         if data["message"] == response:
                 update_method(data["data"])
                 print("Data updated: ",self.database)
@@ -304,7 +283,7 @@ class ChordNode:
         while self.leader == self.nodeID: 
             addresses , new_nodes= self.check_network()
             
-            if last_nodeSet == None or not new_nodes == last_nodeSet:
+            if not last_nodeSet or not new_nodes == last_nodeSet:
                 print("New nodes",addresses)
                 self.node_address = self.get_addresses(addresses)
                 self.nodeSet = new_nodes
@@ -321,28 +300,9 @@ class ChordNode:
         
         for address in self.possible_addresses:
             #print(f'Connecting to {address} to check if node is alive') 
-            
-            sender = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            try : sender.connect(address)
-            except ConnectionRefusedError as e :
-                sender.close()
-                #print("Error de conexion :", e)
-                continue
-
-            # establecer un tiempo de espera de 10 segundos
-            sender.settimeout(10)
-
             data = {"message": CHECK_REQ, "ip": self.address.ip , "ports": self.address.ports, "nodeID": self.nodeID,"leader":self.nodeID}
-            json_data = json.dumps(data).encode('utf-8')
-
-            #print("Sending Message")
-            sender.send(json_data)
-            try:
-                # Esperar la llegada de un mensaje
-                data = sender.recv(1024)
-                data = data.decode('utf-8')
-                data = json.loads(data) 
-          
+            data = self.send_request(address,data)
+            if data:
                 if data["message"] == CHECK_REP:
                     current_id = data["nodeID"]
                     leader = data["leader"]
@@ -354,19 +314,10 @@ class ChordNode:
                     print(f"Check response received from {current_id}")
 
                     if leader == current_id and current_id > self.nodeID:
-                        sender.close()
-                        #unpacking data
                         print(f'There is a Leader with ID {current_id}, greater than mine. Im not leader anymore')
                         self.leader = current_id
                         return data["addresses"],data["nodes_ID"]
-                        
-            except socket.timeout:
-                # Manejar la excepción si se agotó el tiempo de espera
-                #print("Tiempo de espera agotado para recibir un mensaje")
-                pass
-           
-            sender.close()
-            discovered_nodes.sort()
+        discovered_nodes.sort()
         return discovered_addresses, discovered_nodes
 
     def updates_nodeSet(self):
@@ -494,10 +445,6 @@ class ChordNode:
          return value              
     
          
-    
-
-    
-
 
 #######Tests###########################
 
