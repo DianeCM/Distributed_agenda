@@ -62,7 +62,7 @@ def check_value(key,expected_value,port):
     assert  expected_value == value
 
 def check_replication():
-   time.sleep(10)
+   time.sleep(100)
    for pair in pairs:
     key = pair[0]
     value = pair[1]

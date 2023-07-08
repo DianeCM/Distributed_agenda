@@ -150,7 +150,13 @@ class ChordNode:
                 print(colored(f"Receiving {action} from {node}","blue"))
                 json_data = self.index_data(msg,get_data)
                 conn.send(json_data)
-        
+
+            if request == GET_NODES:
+                addresses = { node : (address.ip,address.ports[0],address.ports[1]) for node,address in self.node_address.items()}
+                data = {"message": SET_NODES,"ip": self.address.ip , "ports": self.address.ports , "nodeID": self.nodeID, "nodeSet":self.nodeSet, "addresses":addresses}
+                data = json.dumps(data).encode('utf-8')
+                conn.send(data)
+
     def index_data(self,msg,get_data):
         start_index = msg["startID"] if get_data else self.Predecessor
         end_index = msg["nodeID"]    if get_data else self.nodeID
@@ -187,9 +193,18 @@ class ChordNode:
                 # Manejar la excepción si se agotó el tiempo de espera
                 print(colored("Tiempo de espera agotado para recibir un mensaje","red"))
 
-    def get_nodes(self,address):
-            data = {"message": GET_NODES, "ip": self.address.ip , "ports": self.address.ports, "nodeID": self.nodeID,"leader":self.nodeID}
-            data = self.send_request(str(self.node_address[self.leader]),data)
+    def get_nodes(self):           
+            data = {"message": GET_NODES, "ip": self.address.ip , "ports": self.address.ports, "nodeID": self.nodeID}
+            leader_address = self.node_address[self.leader] 
+            data = self.send_request((leader_address.ip,int(leader_address.ports[1])),data)
+            if data["message"] == SET_NODES:
+                self.nodeSet = data["nodeSet"]
+                print(colored(f"Upadating node set :{self.nodeSet}","magenta"))
+                self.node_address = self.get_addresses(data["addresses"])
+                self.recomputeFingerTable()
+            else:
+                msg = data["message"]
+                print(colored(f"Not expected {msg} !!!!!!!!!!!!!!!!","red"))
 
     # JOIN process
     def join(self):
@@ -233,6 +248,7 @@ class ChordNode:
 
                     if leader == current_id:
                         #unpacking data
+                        self.leader = current_id
                         print(f'Leader found at node {current_id}')
                         return data["addresses"],data["nodes_ID"]
                 
@@ -288,7 +304,7 @@ class ChordNode:
                 self.node_address = self.get_addresses(addresses)
                 self.nodeSet = new_nodes
                 self.recomputeFingerTable()
-                self.updates_nodeSet()
+                #self.updates_nodeSet()
                 last_nodeSet = new_nodes
             else: 
                  print(f"Nodes set already update")
@@ -344,16 +360,19 @@ class ChordNode:
            
             if request == STOP: 
                 break 
-            elif request == LOOKUP_REQ:                       # A lookup request #-
+            elif request == LOOKUP_REQ: 
+               if not self.leader == self.nodeID: self.get_nodes()                  # A lookup request #-
                self.lookup_key(data)               
-            elif request == UPDATE_REQ:
-                self.update(data)
+            #elif request == UPDATE_REQ:
+            #    if not self.leader == self.nodeID: self.update(data)
             elif request == SET_DATA_REQ:
+                if not self.leader == self.nodeID: self.get_nodes()                
                 self.update_key(data) 
             elif request == SET_REP_DATA_REQ:
                 self.set_data(data)
             elif request == GET_DATA_REQ:
-                 self.get_key(data)
+                if not self.leader == self.nodeID: self.get_nodes()
+                self.get_key(data)
 
     def lookup_key(self,data):
                 key = data["key"]
@@ -400,9 +419,10 @@ class ChordNode:
                     consumer_sender.send_json(data)
                 else :
                     self.set_data(data)
-                    next_node = self.FT[0]
+                    next_node = self.FT[1]
                     if not self.nodeID == next_node:
                         consumer_sender.connect(str(self.node_address[next_node]))
+                        print(colored(f"Sending SET_REP_DATA_REQ to {next_node}","green"))
                         data = {"message": SET_REP_DATA_REQ, "ip": self.address.ip , "port": self.address.ports[0], "node":  nextID,"key":key,"value":value}
                         consumer_sender.send_json(data)
                 
