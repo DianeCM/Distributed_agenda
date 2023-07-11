@@ -35,19 +35,21 @@ class ChordNode:
 
         #initializing sockets
 
-        self.context = zmq.Context()
+        #self.context = zmq.Context()
 
         #socket al cual seran enviados todos los request que no sean de descubrimiento 
 
-        self.receiver = self.context.socket(zmq.PULL)       
-        self.receiver.bind(str(self.address))
-
+        
         #Cuando otro nodo de la red quiera saber si este nodo esta, debe conectarse a este socket o 
         # si este nodo es el lider el resto se conecta a este socket para actualizar su lista de nodos
         
         self.discover = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.discover.bind((self.address.ip, int(self.address.ports[1])))
         self.discover.listen()
+
+        self.receiver = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.receiver.bind((self.address.ip, int(self.address.ports[0])))
+        self.receiver.listen()
 
         self.join()
 
@@ -64,6 +66,10 @@ class ChordNode:
     def Sucessor(self):
         return self.FT[1]
     
+    @property
+    def Serialize_Address(self):
+        return { node : (address.ip,address.ports[0],address.ports[1]) for node,address in self.node_address.items()}
+
     def inbetween(self, key, lwb, upb):                                         
         if lwb <= upb:                                                            
             return lwb <= key < upb                                                                                                         
@@ -117,7 +123,7 @@ class ChordNode:
                 data = {"message": JOIN_REP, "ip": self.address.ip , "ports": self.address.ports , "nodeID": self.nodeID, "leader": self.leader}
                 newID = msg["nodeID"]
                 if not newID in self.nodeSet:
-                    print(f"Receiving JOIN request from {newID}")
+                    notify_data(f"Receiving JOIN request from {newID}","Join")
 
                     #if Im the leader 
                     if self.leader == self.nodeID:
@@ -130,14 +136,13 @@ class ChordNode:
                     json_data = json.dumps(data).encode('utf-8')
                     conn.send(json_data)
 
-            #A leader wants to check if Im alive
+            #Someone wants to check if Im alive
             if request == CHECK_REQ:
-                data = {"message": CHECK_REP,"ip": self.address.ip , "ports": self.address.ports , "nodeID": self.nodeID, "leader": self.leader}
+                data = {"message": CHECK_REP,"ip": self.address.ip , "ports": self.address.ports , "nodeID": self.nodeID, "leader": self.leader, "nodes_ID":self.nodeSet, "addresses":self.Serialize_Address }
                 newID = msg["nodeID"]
-        
-                print(f"Receiving CHECK request from {newID}")
-                if  self.leader == self.nodeID and msg["leader"] == newID  and newID > self.nodeID:
-                    
+                
+                notify_data(f"Receiving CHECK request from {newID}","Check")
+                if  self.leader == self.nodeID and msg["leader"] == newID  and newID > self.nodeID:                    
                         self.leader = newID
                 json_data = json.dumps(data).encode('utf-8')
                 conn.send(json_data)
@@ -147,16 +152,25 @@ class ChordNode:
                 get_data =  request == MOV_DATA_REQ
                 action = "MOV_DATA_REQ" if get_data else "REP_DATA_REQ"
                 node = msg["nodeID"]
-                print(colored(f"Receiving {action} from {node}","blue"))
+                notify_data(f"Receiving {action} from {node}","GetData")
                 json_data = self.index_data(msg,get_data)
                 conn.send(json_data)
 
             if request == GET_NODES:
+                id = msg["nodeID"]
+                notify_data(f'Recieving GET_NODES request from {id}',"GetData")
                 addresses = { node : (address.ip,address.ports[0],address.ports[1]) for node,address in self.node_address.items()}
                 data = {"message": SET_NODES,"ip": self.address.ip , "ports": self.address.ports , "nodeID": self.nodeID, "nodeSet":self.nodeSet, "addresses":addresses}
                 data = json.dumps(data).encode('utf-8')
                 conn.send(data)
 
+            if request == SET_LEADER:
+                id = msg["nodeID"]
+                notify_data(f'Recieving SET_LEADER request from {id}',"Check")
+                addresses,self.nodeSet = self.discover_nodes(True)
+                self.node_address = self.get_addresses(addresses) 
+                self.recomputeFingerTable()
+                
     def index_data(self,msg,get_data):
         start_index = msg["startID"] if get_data else self.Predecessor
         end_index = msg["nodeID"]    if get_data else self.nodeID
@@ -168,52 +182,35 @@ class ChordNode:
         data = {"message": response,"ip": self.address.ip , "ports": self.address.ports , "nodeID": self.nodeID, "data":resp_data}
         return json.dumps(data).encode('utf-8')
 
-    def send_request(self,address,data):     
-            sender = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            try : sender.connect(address)
-            except ConnectionRefusedError as e :
-                sender.close()
-                return None
-                #print("Error de conexion :", e)
-                
-            # establecer un tiempo de espera de 10 segundos
-            sender.settimeout(10)
-            json_data = json.dumps(data).encode('utf-8')
-
-            #print("Sending Message")
-            sender.send(json_data)
-            try:
-                # Esperar la llegada de un mensaje
-                data = sender.recv(1024)
-                data = data.decode('utf-8')
-                data = json.loads(data) 
-                sender.close()
-                return data
-            except socket.timeout:
-                # Manejar la excepción si se agotó el tiempo de espera
-                print(colored("Tiempo de espera agotado para recibir un mensaje","red"))
 
     def get_nodes(self):           
             data = {"message": GET_NODES, "ip": self.address.ip , "ports": self.address.ports, "nodeID": self.nodeID}
             leader_address = self.node_address[self.leader] 
-            data = self.send_request((leader_address.ip,int(leader_address.ports[1])),data)
-            if data["message"] == SET_NODES:
+            data = send_request((leader_address.ip,int(leader_address.ports[1])),data,True)
+            if data:
+              if data["message"] == SET_NODES:
                 self.nodeSet = data["nodeSet"]
-                print(colored(f"Upadating node set :{self.nodeSet}","magenta"))
+                notify_data(f"Upadating node set :{self.nodeSet}","GetData")
                 self.node_address = self.get_addresses(data["addresses"])
                 self.recomputeFingerTable()
-            else:
+              else:
                 msg = data["message"]
-                print(colored(f"Not expected {msg} !!!!!!!!!!!!!!!!","red"))
-
+                notify_data(f"Not expected {msg} !!!!!!!!!!!!!!!!","Error")
+            else:
+                addresses,self.nodeSet = self.discover_nodes(True)
+                #building node_address dict
+                self.node_address = self.get_addresses(addresses)       
+                #Computing Finger Table
+                self.recomputeFingerTable()
+                 
     # JOIN process
     def join(self):
 
-        addresses,self.nodeSet = self.discover_nodes()
+        addresses,self.nodeSet = self.discover_nodes(False)
 
         #notify data
-        print("Joined to an %s chord network as node %s" % (self.nBits,self.nodeID))
-        print("Discovered nodes %s" % (self.nodeSet))
+        notify_data("Joined to an %s chord network as node %s" % (self.nBits,self.nodeID),"Join")
+        notify_data("Discovered nodes %s" % (self.nodeSet),"Join")
 
         #building node_address dict
         self.node_address = self.get_addresses(addresses)
@@ -225,18 +222,19 @@ class ChordNode:
             self.update_data(True)
             self.update_data(False)
 
-    def discover_nodes(self):
-        current_leader = 0
-        leader_address = None
+    def discover_nodes(self,find_leader):
+        current_leader = self.nodeID
+        leader_address = self.address
         discovered_nodes = [self.nodeID]
         discovered_addresses = {self.nodeID:(self.address.ip,self.address.ports[0],self.address.ports[1])}
-
+        msg_to_send = CHECK_REQ if find_leader else JOIN_REQ
+        msg_to_rcv  = CHECK_REP if find_leader else JOIN_REP
         for address in self.possible_addresses:
             #print(f'Connecting to {address}') 
-            data = {"message": JOIN_REQ, "ip": self.address.ip , "ports": self.address.ports, "nodeID": self.nodeID}
-            data = self.send_request(address,data)
+            data = {"message": msg_to_send, "ip": self.address.ip , "ports": self.address.ports, "nodeID": self.nodeID, "leader":self.leader,"nodeSet":self.nodeSet}
+            data = send_request(address,data,True)
             if data:
-                if data["message"] == JOIN_REP:
+                if data["message"] == msg_to_rcv:
                     current_id = data["nodeID"]
                     leader = data["leader"]
                     ip = data["ip"]
@@ -244,28 +242,32 @@ class ChordNode:
                     discovered_addresses[current_id] = (ip,ports[0],ports[1])
                     discovered_nodes.append(current_id)
 
-                    print(f'Node {current_id} discovered')
+                    notify_data(f'Node {current_id} discovered',"Join")
 
                     if leader == current_id:
-                        #unpacking data
                         self.leader = current_id
-                        print(f'Leader found at node {current_id}')
+                        notify_data(f'Leader found at node {current_id}',"Join")
                         return data["addresses"],data["nodes_ID"]
                 
                     elif current_id > current_leader:
                         current_leader = current_id
                         leader_address = Address(ip,ports[0],ports[1])
                                    
-        if leader_address == None:
-                print(f'No node found. Setting myself as leader')
+        if current_leader == self.nodeID:
+                notify_data('Setting myself as leader',"Join")
                 discovered_nodes.sort()
                 self.leader = self.nodeID
                 thread = threading.Thread(target=self.leader_labor)
                 thread .start()
-                return discovered_addresses,discovered_nodes
-            
-        #else: Q hacer cuando ninguno de los que respondio era el lider ?????????????????? 
+        else: 
+            notify_data(f'Greatest node found : {current_leader}. That one is the leader',"Join")
+            data = {"message": SET_LEADER, "ip": self.address.ip, "ports": self.address.ports, "nodeID": self.nodeID, "leader":self.leader,"nodeSet":self.nodeSet}
+            send_request((leader_address.ip,int(leader_address.ports[1])),data,False)
+            discovered_nodes.sort()
+            self.leader = current_leader
 
+        return discovered_addresses,discovered_nodes   
+    
     def update_data(self,get_data):
         
         node = self.Sucessor if get_data else self.Predecessor
@@ -274,22 +276,22 @@ class ChordNode:
         receiver = "sucessor" if get_data else "predecessor"
         update_method = self.initialize_data if get_data else self.replicate_data
 
-        print(colored(f"Connecting to {receiver} : node {node}","blue"))
+        notify_data(f"Connecting to {receiver} : node {node}","GetData")
 
-        address = self.node_address[node].ip,int(self.node_address[node].ports[1])
+        address = (self.node_address[node].ip,int(self.node_address[node].ports[1]))
         data = {"message": request, "ip": self.address.ip , "port": self.address.ports, "nodeID": self.nodeID}
         if get_data: data["startID"] = self.Predecessor
-        data = self.send_request(address,data)
+        data = send_request(address,data,True)
         if data["message"] == response:
                 update_method(data["data"])
-                print("Data updated: ",self.database)
+                notify_data(f"Data updated: {self.database} ","database")
         
     def initialize_data(self,data):
-        self.database = data
-
+        for id,info in data.items():
+                self.database [int(id)] = info 
     def replicate_data(self,new_data):
         for id,info in new_data.items():
-            self.database [id] = info 
+            self.database [int(id)] = info 
 
     
     # LEADER process            
@@ -300,14 +302,14 @@ class ChordNode:
             addresses , new_nodes= self.check_network()
             
             if not last_nodeSet or not new_nodes == last_nodeSet:
-                print("New nodes",addresses)
+                notify_data(f"New nodes {addresses}","Join")
                 self.node_address = self.get_addresses(addresses)
                 self.nodeSet = new_nodes
                 self.recomputeFingerTable()
                 #self.updates_nodeSet()
                 last_nodeSet = new_nodes
             else: 
-                 print(f"Nodes set already update")
+                 notify_data(f"Nodes set already update","Check")
             time.sleep(30)
 
     def check_network(self):
@@ -317,7 +319,7 @@ class ChordNode:
         for address in self.possible_addresses:
             #print(f'Connecting to {address} to check if node is alive') 
             data = {"message": CHECK_REQ, "ip": self.address.ip , "ports": self.address.ports, "nodeID": self.nodeID,"leader":self.nodeID}
-            data = self.send_request(address,data)
+            data = send_request(address,data,True)
             if data:
                 if data["message"] == CHECK_REP:
                     current_id = data["nodeID"]
@@ -327,33 +329,27 @@ class ChordNode:
                     discovered_addresses[current_id] = (ip,ports[0],ports[1])
                     discovered_nodes.append(current_id)
 
-                    print(f"Check response received from {current_id}")
+                    notify_data(f"Check response received from {current_id}","Check")
 
                     if leader == current_id and current_id > self.nodeID:
-                        print(f'There is a Leader with ID {current_id}, greater than mine. Im not leader anymore')
+                        notify_data(f'There is a Leader with ID {current_id}, greater than mine. Im not leader anymore',"Join")
                         self.leader = current_id
                         return data["addresses"],data["nodes_ID"]
         discovered_nodes.sort()
         return discovered_addresses, discovered_nodes
-
-    def updates_nodeSet(self):
-        addresses = { node : (address.ip,address.ports[0],address.ports[1]) for node,address in self.node_address.items()}
-        for node in self.nodeSet:
-            if not node == self.nodeID:
-                consumer_sender = self.context.socket(zmq.PUSH)
-           
-                consumer_sender.connect(str(self.node_address[node]))
-                data = {"message": UPDATE_REQ, "ip": self.address.ip , "port": self.address.ports[0], "nodeSet": self.nodeSet, "addresses": addresses} # send to succ
-                print(f"Sending update request to node {node}",str(self.node_address[node]))
-                consumer_sender.send_json(data)
-                consumer_sender.close()
 
 
     # MAIN process
     def run(self):
         #Receiving requests
         while True:
-            data = self.receiver.recv_json()
+            print("next_step")
+            
+            print(f"My address: {str(self.address)}")
+            conn, addr = self.receiver.accept()
+            msg=conn.recv(1024)
+            msg = msg.decode('utf-8')
+            data = json.loads(msg) 
 
             #unpacking data
             request = data["message"]
@@ -366,39 +362,42 @@ class ChordNode:
             #elif request == UPDATE_REQ:
             #    if not self.leader == self.nodeID: self.update(data)
             elif request == SET_DATA_REQ:
+                p = data["port"]
+                print(self.address.ports[0])
+                notify_data(f"Receiving SET_DATA_REQ from {p}","GetData")
                 if not self.leader == self.nodeID: self.get_nodes()                
                 self.update_key(data) 
             elif request == SET_REP_DATA_REQ:
                 self.set_data(data)
             elif request == GET_DATA_REQ:
+                notify_data(f"Receiving GET_DATA_REQ","GetData")
                 if not self.leader == self.nodeID: self.get_nodes()
-                self.get_key(data)
+                self.get_key(data,addr)
+         
 
     def lookup_key(self,data):
                 key = data["key"]
                 ip = data["ip"]
                 port = data["port"]
             
-                print(colored(f"Receiving LOOKUP_REQ of {key} key","green"))
+                notify_data(f"Receiving LOOKUP_REQ of {key} key","GetData")
                 #print(self.FT)
                 nextID = self.localSuccNode(key)          # look up next node #-
-                consumer_sender = self.context.socket(zmq.PUSH)
+                
                 if not nextID == self.nodeID :
-                    print(f"Connecting to {nextID}")
-                    consumer_sender.connect(str(self.node_address[nextID]))
+                    #notify_data(f"Connecting to {nextID}","GetData")
                     data = {"message": LOOKUP_REQ, "ip": ip , "port": port, "key": key} # send to succ
-                    print(colored(f"Sending LOOKUP_REQ to {nextID} node ","green"))
-                    consumer_sender.send_json(data)
-                else :
-                    consumer_sender.connect(f"tcp://{ip}:{port}")
-                    data = {"message": LOOKUP_REP, "ip": self.address.ip , "port": self.address.ports[0], "node":  nextID,"key":key}
-                    consumer_sender.send_json(data)
-                consumer_sender.close()
+                    send_request((self.node_address[nextID].ip,int(self.node_address[nextID].ports[0])),data,False)
+                    notify_data(f"Sending LOOKUP_REQ to {nextID} node ","Get_Data")
+                else:
+                    data = {"message": LOOKUP_REP, "ip": self.address.ip , "port": self.address.ports[0], "node":  nextID,"key":key}        
+                    send_request((ip,int(port)),data,False)               
 
     def update(self,data):
-                print("Receiving update request")   
+                notify_data("Receiving update request","GetData")   
                 self.nodeSet = data["nodeSet"]    
-                print("Nodes",data["addresses"])
+                nod_ad = data["addresses"]
+                notify_data(f"Nodes {nod_ad}","database")
                 self.node_address = self.get_addresses(data["addresses"])
                 self.recomputeFingerTable()
 
@@ -408,60 +407,54 @@ class ChordNode:
                 ip = data["ip"]
                 port = data["port"]
             
-                print(colored(f"Receiving SET_DATA_REQ of {key} key","green"))
+                notify_data(f"Receiving SET_DATA_REQ of {key} key","SetData")
                 nextID = self.localSuccNode(key)          # look up next node #-
-                consumer_sender = self.context.socket(zmq.PUSH)
+                
                 if not nextID == self.nodeID :
-                    print(f"Connecting to {nextID}")
-                    consumer_sender.connect(str(self.node_address[nextID]))
-                    data = {"message": SET_DATA_REQ, "ip": ip , "port": port, "key": key , "value":value} # send to succ
-                    print(colored(f"Sending SET_DATA_REQ {key}:{value} to {nextID} node ","green"))
-                    consumer_sender.send_json(data)
+                    data = {"message": SET_DATA_REQ, "ip": ip , "port": self.address.ports[0], "key": key , "value":value} # send to succ                    
+                    notify_data(f"Sending SET_DATA_REQ {key}:{value} to {nextID}: {str(self.node_address[nextID])} node ","SetData")
+                    send_request((self.node_address[nextID].ip,int(self.node_address[nextID].ports[0])),data,False)
                 else :
                     self.set_data(data)
                     next_node = self.FT[1]
                     if not self.nodeID == next_node:
-                        consumer_sender.connect(str(self.node_address[next_node]))
-                        print(colored(f"Sending SET_REP_DATA_REQ to {next_node}","green"))
+                        notify_data(f"Sending SET_REP_DATA_REQ to {next_node}","SetData")
                         data = {"message": SET_REP_DATA_REQ, "ip": self.address.ip , "port": self.address.ports[0], "node":  nextID,"key":key,"value":value}
-                        consumer_sender.send_json(data)
-                
-                consumer_sender.close()
+                        send_request((self.node_address[next_node].ip,int(self.node_address[next_node].ports[0])),data,False)  
 
-    def get_key(self,data):
+    def get_key(self,data,addr):
                 ip = data["ip"]
                 port = data["port"]            
                 key = data["key"]
-                print(colored(f"Receiving GET_DATA_REQ of {key} key","green"))
+                sender_addr = data["sender_addr"]
+                notify_data(f"Receiving GET_DATA_REQ of {key} key from {sender_addr}","GetData")
                 nextID = self.localSuccNode(key)          # look up next node #-
-                consumer_sender = self.context.socket(zmq.PUSH)
+
                 if not nextID == self.nodeID :
-                    print(f"Connecting to {nextID}")
-                    consumer_sender.connect(str(self.node_address[nextID]))
-                    data = {"message": GET_DATA_REQ, "ip": ip , "port": port, "key": key} # send to succ
-                    print(colored(f"Sending GET_DATA_REQ of {key} to {nextID} node ","green"))
-                    consumer_sender.send_json(data)
+
+                    data = {"message": GET_DATA_REQ, "ip": ip , "port": port, "key": key,"sender_addr":sender_addr } # send to succ 
+                    send_request((self.node_address[nextID].ip,int(self.node_address[nextID].ports[0])),data,False)
+                    notify_data(f"Sending GET_DATA_REQ of {key} to {nextID} node : {str(self.node_address[nextID])} ","GetData")
                 else:
-                    consumer_sender.connect(f"tcp://{ip}:{port}")
                     value = self.get_data(data)
                     data = {"message": GET_DATA_REP, "ip": self.address.ip , "port": self.address.ports[0], "node":  nextID,"value": value}
-                    consumer_sender.send_json(data)
-                    print(colored(f"Sending  GET_DATA_REP to {ip}:{port} value: {value}","green"))
-                consumer_sender.close()
+                    notify_data(f"Sending  GET_DATA_REP to {sender_addr} value: {value}","GetData")
+                    send_request((sender_addr[0],sender_addr[1]),data,False)
+                    
 
     def set_data(self,data):
          key = data["key"]
          value = data["value"]
          self.database[key] = value
-         print(colored(f"Set {value} to {key} key","yellow"))
+         notify_data(f"Set {value} to {key} key","SetData")
 
     def get_data(self,data):
          key = data["key"]
          try: value = self.database[key] 
          except KeyError:
-            print(colored(f"Key {key} not found","red"))
+            notify_data(colored(f"Key {key} not found","Error"))
             return None
-         print(colored(f"Obtained {value} to {key} key","yellow"))
+         notify_data(f"Obtained {value} to {key} key","GetData")
          return value              
     
          

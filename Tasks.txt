@@ -12,5 +12,7 @@ comenzar a correr el hilo de discover_request desde que se inicia el nodo
 Look_up response se debe enviar al nodo que hizo el request o directamente al cliente ??
 verificar si el sucesor es el que tiene la llave 
 Si un lider le escribe a otro lider
-Problema con la conssitencia al llegar un nodo nuevo 
-Borrar datos los datos del predecesor cuando se tiene un nuevo predeccesor
+Problema con la consistencia al llegar un nodo nuevo 
+Borrar datos los datos del anterior predecesor cuando se tiene un nuevo predeccesor
+no quedarme con la info del lider hasta q no me  notifique q es el lider
+actualizacion de nodeSet
