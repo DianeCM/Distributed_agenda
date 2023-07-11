@@ -1,299 +1,333 @@
-import sqlite3 as sql3
+from peewee import *
+from enum import Enum
+from utils import hash_key
 
-# CREAR LA BASE DE DATOS
-def create_tables():
-    conn = sql3.connect('agenda.db')
-    conn.execute('''CREATE TABLE IF NOT EXISTS person (username VARCHAR(15) PRIMARY KEY, 
-                                                    name VARCHAR(15), 
-                                                    last_name VARCHAR(40))''')
-    conn.execute('''CREATE TABLE IF NOT EXISTS team (id_group INTEGER PRIMARY KEY AUTOINCREMENT,
-                                                    name VARCHAR(40),
-                                                    propietary VARCHAR(15), 
-                                                    type VARCHAR(15))''')
-    conn.execute('''CREATE TRIGGER IF NOT EXISTS delete_team AFTER DELETE ON person FOR EACH ROW BEGIN DELETE FROM team WHERE propietary=OLD.username; END;''')
-    conn.execute('''CREATE TABLE IF NOT EXISTS group_roles (id_group INTEGER,
-                                                    role VARCHAR(40),
-                                                    priority INTEGER,
-                                                    PRIMARY KEY(id_group, role))''')
-    conn.execute('''CREATE TRIGGER IF NOT EXISTS delete_grole AFTER DELETE ON team FOR EACH ROW BEGIN DELETE FROM group_roles WHERE id_group=OLD.id_group; END;''')
-    conn.execute('''CREATE TABLE IF NOT EXISTS persons_groups (username VARCHAR(15), 
-                                                    id_group INTEGER, 
-                                                    role VARCHAR(40), 
-                                                    PRIMARY KEY(username, id_group))''')
-    conn.execute('''CREATE TRIGGER IF NOT EXISTS delete_pgroup1 AFTER DELETE ON person FOR EACH ROW BEGIN DELETE FROM persons_groups WHERE username=OLD.username; END;''')
-    conn.execute('''CREATE TRIGGER IF NOT EXISTS delete_pgroup2 AFTER DELETE ON group_roles FOR EACH ROW BEGIN DELETE FROM persons_groups WHERE id_group=OLD.id_group; END;''')
-    conn.execute('''CREATE TRIGGER  IF NOT EXISTS delete_pgroup3 AFTER DELETE ON group_roles FOR EACH ROW BEGIN UPDATE persons_groups SET role="Miembro" WHERE role=OLD.role; END;''')
-    conn.execute('''CREATE TABLE IF NOT EXISTS personal_events (id_event INTEGER PRIMARY KEY AUTOINCREMENT,
-                                                    username VARCHAR(15),
-                                                    name VARCHAR(40), 
-                                                    date_ini VARCHAR(25), 
-                                                    date_end VARCHAR(25),
-                                                    visibility VARCHAR(8),          
-                                                    UNIQUE (username, id_event))''')
-    conn.execute('''CREATE TRIGGER IF NOT EXISTS delete_pevent AFTER DELETE ON person FOR EACH ROW BEGIN DELETE FROM personal_events WHERE username=OLD.username; END;''')
-    conn.execute('''CREATE TABLE IF NOT EXISTS groupal_events (id_event INTEGER PRIMARY KEY AUTOINCREMENT,
-                                                    id_group INTEGER,
-                                                    name VARCHAR(40),  
-                                                    date_ini VARCHAR(25), 
-                                                    date_end VARCHAR(25),
-                                                    author VARCHAR(15),
-                                                    UNIQUE (id_group, id_event))''')
-    conn.execute('''CREATE TRIGGER IF NOT EXISTS delete_gevent1 AFTER DELETE ON team FOR EACH ROW BEGIN DELETE FROM groupal_events WHERE id_group=OLD.id_group; END;''')
-    conn.execute('''CREATE TRIGGER IF NOT EXISTS delete_gevent2 AFTER DELETE ON person FOR EACH ROW BEGIN DELETE FROM groupal_events WHERE author=OLD.username; END;''')
-    conn.execute('''CREATE TABLE IF NOT EXISTS member_events (username VARCHAR(15),
-                                                    id_group INTEGER,
-                                                    id_event INTEGER,
-                                                    PRIMARY KEY (username, id_group, id_event))''')
-    conn.execute('''CREATE TRIGGER IF NOT EXISTS delete_mevent1 AFTER DELETE ON person FOR EACH ROW BEGIN DELETE FROM member_events WHERE username=OLD.username; END;''')
-    conn.execute('''CREATE TRIGGER IF NOT EXISTS delete_mevent2 AFTER DELETE ON groupal_events FOR EACH ROW BEGIN DELETE FROM member_events WHERE (id_group=OLD.id_group OR id_event=OLD.id_event); END;''')
-    conn.commit()
-    conn.close()
+class Privacity(Enum):
+    Public = "Público"
+    Private = "Privado"
 
-# CREACION DE CUENTA EN EL SISTEMA INTRODUCE USUARIO A LA BASE DE DATOS
-def insert_person(username:str, name:str, last_name:str):
-    conn = sql3.connect('agenda.db')
-    cursor = conn.cursor()
-    cursor.execute(f'''INSERT INTO person (username, name, last_name) VALUES ('{username}', '{name}', '{last_name}')''')
-    conn.commit()
-    cursor.close()
-    conn.close()
+class GType(Enum):
+    Hierarchical = "Jerárquico"
+    Non_hierarchical = "No Jerárquico"
 
-# ELIMINACION DE CUENTA EN EL SISTEMA BORRA USUARIO DE LA BASE DE DATOS CON TODO LO RELACIONADO A SU CUENTA
-def delete_person(username:str):
-    conn = sql3.connect('agenda.db')
-    cursor = conn.cursor()
-    cursor.execute(f'''DELETE FROM person WHERE username="{username}"''')
-    conn.commit()
-    cursor.close()
-    conn.close()
+class State(Enum):
+    Asigned = "Asignado"
+    Pendient = "Pendiente"
+    Personal = "Personal"
 
-# CREACION DE GRUPO POR UN USUARIO EN EL SISTEMA INTRODUCE GRUPO A LA BASE DE DATOS Y LA RELACION USUARIO-GRUPO COMO PROPIETARIO
-def insert_group(username:str, name:str, group_type:str):
-    conn = sql3.connect('agenda.db')
-    cursor = conn.cursor()
-    cursor.execute(f'''INSERT INTO team (name, propietary, type) VALUES ('{name}','{username}','{group_type}')''')
-    id_group = cursor.lastrowid
-    cursor.execute(f'''INSERT INTO group_roles (id_group, role, priority) VALUES ({id_group},'Propietario',0)''')
-    cursor.execute(f'''INSERT INTO group_roles (id_group, role, priority) VALUES ({id_group},'Miembro',10000000)''')
-    cursor.execute(f'''INSERT INTO persons_groups (username, id_group, role) VALUES ('{username}','{id_group}','Propietario')''')
-    conn.commit()
-    cursor.close()
-    conn.close()
+class Account(Model):
+    iduser = BlobField(null=False, unique=True, primary_key=True)
+    name = CharField(max_length=15, null=False)
+    last = CharField(max_length=40, null=False)
+    password = CharField(max_length=50, null=False)
 
-# ELIMINACION DE GRUPO EN EL SISTEMA BORRA GRUPO DE LA BASE DE DATOS Y TODO LO RELACIONADO USUARIO-GRUPO y EVENTO-GRUPO
-def delete_group(id_group:int):
-    conn = sql3.connect('agenda.db')
-    cursor = conn.cursor()
-    cursor.execute(f'''DELETE FROM team WHERE id_group={id_group}''')
-    conn.commit()
-    cursor.close()
-    conn.close()
+    class Meta:
+        database = None
 
-# CREACION DE ROL POR PROPIETARIO DE GRUPO JERARQUICO EN EL SISTEMA
-#*************************************************************modif name (mod gro_per kien tenia ese role) and prior
-def insert_role(id_group:int, name:str, priority:int):
-    if 0 < priority < 10000000:
+
+class Notification(Model):
+    user = ForeignKeyField(Account, on_delete='CASCADE')
+    idnotif = BigIntegerField(null=False)
+    text = CharField(max_length=300)
+
+    class Meta:
+        database = None
+        primary_key = CompositeKey('user', 'idnotif')
+        autoincremental = 1
+
+    def save(self, *args, **kwargs):
+        if not self.idnotif:
+            self.idnotif = Notification._meta.autoincremental
+            Notification._meta.autoincremental += 1
+        Model.save(self, *args, **kwargs)
+
+
+class Group(Model):
+    creator = ForeignKeyField(Account, on_delete='CASCADE')
+    idgroup = BlobField(null=False, unique=True, primary_key=True)
+    gname = CharField(max_length=50, null=False)
+    gtype = CharField(max_length=15, null=False)
+    description = CharField(max_length=100, null=True)
+
+    class Meta:
+        database = None
+        autoincremental = 1
+
+    def save(self, *args, **kwargs):
+        if self.idgroup is None:
+            id_current = Group._meta.autoincremental
+            creator = int.from_bytes(self.creator.iduser,byteorder='big')
+            id_current = hash_key(f'{creator}_{id_current}')
+            self.idgroup = id_current.to_bytes(20, byteorder='big')
+            Group._meta.autoincremental += 1
+        Model.save(self, *args, **kwargs)
+
+
+class MemberGroup(Model):
+    user = ForeignKeyField(Account, on_delete='CASCADE')
+    idgroup = BlobField(null=False)
+    idref = BlobField(null=False)
+
+    class Meta:
+        database = None
+        primary_key = CompositeKey('user','idgroup')
+
+
+class MemberAccount(Model):
+    group = ForeignKeyField(Group, on_delete='CASCADE')
+    iduser = BlobField(null=False)
+    role = CharField(max_length=50, null=False)
+    level = IntegerField(null=False)
+
+    class Meta:
+        database = None
+        primary_key = CompositeKey('group','iduser')
+
+
+class Event(Model):
+    user = ForeignKeyField(Account, on_delete='CASCADE')
+    idevent = BlobField(null=False)
+    ename = CharField(max_length=100, null=False)
+    date_ini = DateTimeField(null=False)
+    date_end = DateTimeField(null=False)
+    state = CharField(max_length=9, null=False)
+    visibility = CharField(max_length=9, null=False)
+    idcreator = BlobField(null=False)
+    idgroup = BlobField(null=True)
+    
+    class Meta:
+        database = None
+        primary_key = CompositeKey('user', 'idevent')
+        autoincremental = 1
+
+    def save(self, *args, **kwargs):
+        if not self.idevent:
+            id_current = Event._meta.autoincremental
+            user = int.from_bytes(self.user.iduser,byteorder='big')
+            id_current = hash_key(f'{user}_{id_current}')
+            self.idevent = id_current.to_bytes(20, byteorder='big')
+            Event._meta.autoincremental += 1
+        Model.save(self, *args, **kwargs)
+
+
+class NodeYumi:
+    def __init__(self, id: int):
+        db_name = f"{id}.db"
+        self.database = SqliteDatabase(db_name)
+        for cls in [Account, Notification, Group, MemberGroup, MemberAccount, Event]:
+            cls._meta.database = self.database
+            if not cls.table_exists():
+                self.database.create_tables([cls])
+
+    def create_account(self, userkey: int, name: str, last_name: str, password: str):
+        userkey = userkey.to_bytes(20, byteorder='big')
+        account = Account.create(iduser=userkey, name=name, last=last_name, password=password)
+        account.save()
+
+    def delete_account(self, userkey: int):
+        userkey = userkey.to_bytes(20, byteorder='big')
+        account = Account.get(iduser=userkey)
+        account.delete_instance(recursive=True)
+
+    def add_notification(self, userkey: int, notification: str):
+        userkey = userkey.to_bytes(20, byteorder='big')
+        account = Account.get(iduser=userkey)
+        notif = Notification.create(user=account, text=notification)
+        notif.save()
+
+    def show_notification(self, userkey: int):
+        userkey = userkey.to_bytes(20, byteorder='big')
+        registers = Notification.select().where(Notification.user == userkey).order_by(Notification.idnotif.desc())
+        for register in registers:
+            print(register.idnotif, register.text)
+
+    def delete_notification(self, userkey: int, idnotif: int):
+        userkey = userkey.to_bytes(20, byteorder='big')
+        notif = Notification.get((Notification.user == userkey) & (Notification.idnotif == idnotif))
+        notif.delete_instance(recursive=True)
+
+    def create_group(self, userkey:int, name: str, gtype: GType, description: str = ""):
+        userkeyn = userkey.to_bytes(20, byteorder='big')
+        account = Account.get(iduser=userkeyn)
+        group = Group.create(creator=account, gname=name, gtype=gtype.value, description=description)
+        group.save()
+        self.add_member_group(userkey, group.idgroup, userkeyn)
+        self.add_member_account(group.idgroup, userkey, "Propietario")
+
+    def show_user_group_created(self, userkey: int):
+        userkey = userkey.to_bytes(20, byteorder='big')
+        registers = Group.select().where(Group.creator == userkey)
+        for register in registers:
+            print(register.idgroup, register.gname, register.gtype)
+
+    def show_user_in_group(self, userkey: int):
+        userkey = userkey.to_bytes(20, byteorder='big')
+        registers = MemberAccount.select().where(MemberAccount.iduser == userkey)
+        for register in registers:
+            print(register.group, register.role)
+
+    def delete_group(self, userkey: int, id_group: bytes):
+        userkey = userkey.to_bytes(20, byteorder='big')
+        group = Group.get((Group.idgroup == id_group) & (Group.creator == userkey))
+        if group: group.delete_instance(recursive=True)
+        
+    def add_member_group(self, userkey:int, idgroup:bytes, idref:bytes):
+        userkey = userkey.to_bytes(20, byteorder='big')
+        account = Account.get(iduser=userkey)
+        member = MemberGroup.create(user=account, idgroup=idgroup, idref=idref)
+        member.save()
+    
+    def add_member_account(self, idgroup:bytes, userkey: int, role='Miembro', level:int=0):
+        group = Group.get(idgroup=idgroup)
+        userkey = userkey.to_bytes(20, byteorder='big')
+        if role == 'Propietario':
+            role_level = None
+            try:
+                role_level = MemberAccount.get((MemberAccount.group==group)&(MemberAccount.role==role))
+            except:
+                asign = MemberAccount.create(group=group, iduser=userkey, role=role, level=0)
+                asign.save()
+            if role_level is not None:
+                print("Solo puede haber un propietario")
+        elif role == 'Miembro':
+            asign = MemberAccount.create(group=group, iduser=userkey, role=role, level=1000)
+            asign.save()
+        else:
+            if group.gtype == GType.Hierarchical.value:
+                role_level = None
+                try:
+                    role_level = MemberAccount.get((MemberAccount.group==group)&(MemberAccount.role==role))
+                except:
+                    if level is not None and (0 < level < 1000):
+                        asign = MemberAccount.create(group=group, iduser=userkey, role=role, level=level)
+                        asign.save()
+                    else:
+                        print("Debe asignar un valor de nivel al rol")
+                if role_level:
+                    asign = MemberAccount.create(group=group, iduser=userkey, role=role, level=role_level.level)
+                    asign.save()
+            else: print("Este grupo no acepta roles")
+
+    def create_event_personal(self, userkey: int, name:str, date_ini:str, date_end:str, privacity:Privacity=Privacity.Public, idgroup:bytes=None):
+        userkey = userkey.to_bytes(20, byteorder='big')
+        account = Account.get(iduser=userkey)
+        event = Event.create(user=account, ename=name, date_ini=date_ini, date_end=date_end, state=State.Personal, 
+                            visibility=privacity, idcreator=userkey, idgroup=idgroup)
+        event.save()
+
+    def create_event_grupal(self, userkey: int, name:str, date_ini:str, date_end:str, privacity:Privacity=Privacity.Public, idgroup:bytes=None):
+        userkey = userkey.to_bytes(20, byteorder='big')
+        account = Account.get(iduser=userkey)
+        event = Event.create(user=account, ename=name, date_ini=date_ini, date_end=date_end, state=State.Pendient, 
+                            visibility=privacity, idcreator=account.userid, idgroup=idgroup)
+        event.save()
+
+    def show_pendient_events(self):
+        Event._meta.database = self.database
+        true_id = self.id.to_bytes(20, byteorder='big')
+        registers = Event.select().where((Event.user == true_id)&(Event.state==State.Pendient))
+        for register in registers:
+            print(register.ename, register.date_ini, register.date_end)
+
+    def show_all_events(self):
+        Event._meta.database = self.database
+        true_id = self.id.to_bytes(20, byteorder='big')
+        registers = Event.select().where(Event.user == true_id)
+        for register in registers:
+            print(register.ename, register.date_ini, register.date_end, register.state)
+
+    def acept_event(self, idevent:bytes):
+        Event._meta.database = self.database
+        event = Event.get(idevent=idevent)
+        event.state = State.Asigned
+        event.save()
+
+    def decline_event(self, idevent:bytes):
+        # LLAMAR A TO EL MUNDOS
+        pass
+
+    def delete_event(self, idevent:bytes):
+        Event._meta.database = self.database
+        registers = Event.get((Event.idevent == idevent)&(Event.state == State.Personal))
+        if registers: registers.delete_instance(recursive=True)
+        
+
+    def colision_queries():  # APROBADO
         conn = sql3.connect('agenda.db')
         cursor = conn.cursor()
-        cursor.execute(f'''INSERT INTO group_roles (id_group, role, priority) VALUES ({id_group},'{name}',{priority})''')
-        conn.commit()
-        cursor.close()
+        cursor.execute("SELECT * FROM person_grouped JOIN grouped")
+        rows = cursor.fetchall()
+        for row in rows:
+            print(row)
+        # Cerrar la conexion a la base de datos
         conn.close()
-    else:
-        raise print("La prioridad debe ser mayor que 0")
 
-# ELIMINACION DE ROL POR PROPIETARIO DE GRUPO JERARQUICO EN EL SISTEMA
-def delete_role(id_group:int, name:str):
-    if name != "Miembro" or name != "Propietario":
+    def group_per_user_queries():  # APROBADO
         conn = sql3.connect('agenda.db')
         cursor = conn.cursor()
-        cursor.execute(f'''DELETE FROM group_roles WHERE (id_group={id_group} AND role='{name}')''')
-        conn.commit()
-        cursor.close()
+        cursor.execute("SELECT * FROM person_grouped JOIN grouped")
+        rows = cursor.fetchall()
+        for row in rows:
+            print(row)
+        # Cerrar la conexion a la base de datos
         conn.close()
-    else:
-        raise print("No se puede eliminar roles bases")
 
-# AÑADIR MIEMBROS A GRUPO POR PROPIETARIO EN EL SISTEMA INTRODUCE LA RELACION USUARIO-GRUPO COMO MIEMBRO
-def insert_person_to_group(username:str, id_group:int):
-    conn = sql3.connect('agenda.db')
-    cursor = conn.cursor()
-    cursor.execute(f'''INSERT INTO persons_groups (username, id_group, role) VALUES ('{username}',{id_group},'Miembro')''')
-    conn.commit()
-    cursor.close()
-    conn.close()
+    def group_rank():  # APROBADO
+        conn = sql3.connect('agenda.db')
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM person_grouped JOIN grouped")
+        rows = cursor.fetchall()
+        for row in rows:
+            print(row)
+        # Cerrar la conexion a la base de datos
+        conn.close()
 
-# ELIMINACION DE MIEMBRO DE GRUPO EN EL SISTEMA BORRA LA RELACION USUARIO-GRUPO Y PIERDE ACCESO A LOS EVENTOS
-def delete_person_from_group(username:str, id_group:int):
-    conn = sql3.connect('agenda.db')
-    cursor = conn.cursor()
-    cursor.execute(f'''DELETE FROM persons_groups WHERE (id_group={id_group} AND username="{username}")''')
-    conn.commit()
-    cursor.close()
-    conn.close()
+# TEST CASE
+user1 = hash_key("jordipi")
+user2 = hash_key("dianecm")
+node1 = NodeYumi(hash_key("12345654535653555525625363565464473763563"))
+node1.create_account(user1,"Jordan", "Pla Gonzalez","esmionotuyo")
+node1.create_account(user2,"Dianelys", "Cruz Mengana","mecagoento")
 
-#**********************************************************mod role a miembro especifico en g jerarquico
+node1.add_notification(user1,"Tienes un evento que colisiona")
+node1.add_notification(user1,"Tienes pendiente de aceptacion un evento")
+node1.add_notification(user2,"Tienes un evento que colisiona")
+node1.add_notification(user2,"Tienes pendiente de aceptacion un evento")
 
-# AÑADIR EVENTO PERSONAL POR EL USUARIO EN EL SISTEMA
-#********************************************************mod name, dates y vis
-def insert_personal_event(username:str, name:str, date_ini:str, date_end:str, visibility:str='Público'):
-    conn = sql3.connect('agenda.db')
-    cursor = conn.cursor()
-    cursor.execute(f'''INSERT INTO personal_events (username, name, date_ini, date_end, visibility) VALUES ('{username}','{name}','{date_ini}','{date_end}','{visibility}')''')
-    conn.commit()
-    cursor.close()
-    conn.close()
-
-# ELIMINACION DE EVENTO PERSONAL POR EL USUARIO EN EL SISTEMA
-def delete_personal_event(username:str, id_event:int):
-    conn = sql3.connect('agenda.db')
-    cursor = conn.cursor()
-    cursor.execute(f'''DELETE FROM personal_events WHERE (id_event={id_event} AND username="{username}")''')
-    conn.commit()
-    cursor.close()
-    conn.close()
-
-# AÑADIR EVENTO GRUPAL POR USUARIO/MIEMBRO DE GRUPO (JERARQUICO/NO JERARQUICO) EN EL SISTEMA
-#********************************************************mod name, dates
-def insert_groupal_event(id_group:str, name:str, date_ini:str, date_end:str, author:str):
-    conn = sql3.connect('agenda.db')
-    cursor = conn.cursor()
-    cursor.execute(f'''INSERT INTO groupal_events (id_group, name, date_ini, date_end, author) VALUES ({id_group},'{name}','{date_ini}','{date_end}','{author}')''')
-    id_event = cursor.lastrowid
-    cursor.execute(f'''SELECT type FROM team WHERE id_group={id_group}''')
-    row = cursor.fetchall()
-    if row[0] == "Jerárquico":
-        # SELECT id_role, username FROM persons_groups JOIN role_groups ON pg.id_group = rg.id_group WHERE pg.id_group={id_group}
-        # BUSCAR TODOS LOS USERNAME TAL QUE YO COMO AUTHOR SEA SUPERIOR EN EL ROLE JOIN INDEX ROLE
-        # NO ME AGREGO AL EVENTO
-        print()
-    else:
-        # SELECT username FROM persons_groups WHERE id_group={id_group}
-        # username = [row[0] for row in rows]
-        print()
-    #cursor.execute(f'''INSERT INTO member_events (username, id_group, id_event) VALUES ('{username}',{id_group},{id_event})''')
-    conn.commit()
-    cursor.close()
-    conn.close()
-
-# ELIMINACION DE EVENTO GRUPAL POR EL AUTOR DEL EVENTO EN EL SISTEMA
-def delete_groupal_event(username:str, id_event:int):
-    conn = sql3.connect('agenda.db')
-    cursor = conn.cursor()
-    cursor.execute(f'''DELETE FROM groupal_events WHERE (id_event={id_event} AND author="{username}")''')
-    conn.commit()
-    cursor.close()
-    conn.close()
-
-
-# MODIFICACIONES, CONSULTAS
-
-def user_events_queries():
-    conn = sql3.connect('agenda.db')
-    cursor = conn.cursor()
-    # Consultar los datos de la tabla
-    cursor.execute("SELECT * FROM person_grouped JOIN grouped ON person_grouped.id_group = grouped.id_group")
-    rows = cursor.fetchall()
-    for row in rows:
-        print(row)
-    # Cerrar la conexion a la base de datos
-    conn.close()
-
-def user_per_group_low_rank_queries():
-    conn = sql3.connect('agenda.db')
-    cursor = conn.cursor()
-    cursor.execute("SELECT * FROM person_grouped JOIN grouped")
-    rows = cursor.fetchall()
-    for row in rows:
-        print(row)
-    # Cerrar la conexion a la base de datos
-    conn.close()
-
-def colision_queries():
-    conn = sql3.connect('agenda.db')
-    cursor = conn.cursor()
-    cursor.execute("SELECT * FROM person_grouped JOIN grouped")
-    rows = cursor.fetchall()
-    for row in rows:
-        print(row)
-    # Cerrar la conexion a la base de datos
-    conn.close()
-
-def group_per_user_queries():
-    conn = sql3.connect('agenda.db')
-    cursor = conn.cursor()
-    cursor.execute("SELECT * FROM person_grouped JOIN grouped")
-    rows = cursor.fetchall()
-    for row in rows:
-        print(row)
-    # Cerrar la conexion a la base de datos
-    conn.close()
-
-
-create_tables()
-insert_person("jordipi", "Jordan", "Pla Gonzalez")
-insert_person("dianecm", "Dianelys", "Cruz Mengana")
-insert_group("jordipi", "Mala", "Jerárquico")
-insert_group("dianecm", "Buena", "Jerárquico")
-insert_personal_event("dianecm", "Boda de Tia","3/7/23-08:45","3/7/23-16:00")
-insert_personal_event("dianecm", "Quince de Prima","4/7/23-08:45","4/7/23-16:00")
-insert_personal_event("jordipi", "Boda de Hermana","3/7/23-08:45","3/7/23-16:00")
-insert_person_to_group("dianecm", 1)
-conn = sql3.connect('agenda.db')
-cursor = conn.cursor()
-cursor.execute("SELECT * FROM person")
-rows = cursor.fetchall()
-print("Person")
-for row in rows:
-    print(row)
-cursor.execute("SELECT * FROM team")
-rows = cursor.fetchall()
-print("Group")
-for row in rows:
-    print(row)
-cursor.execute("SELECT * FROM group_roles")
-rows = cursor.fetchall()
-print("Roles")
-for row in rows:
-    print(row)
-cursor.execute("SELECT * FROM persons_groups")
-rows = cursor.fetchall()
-print("Person x Groups")
-for row in rows:
-    print(row)
-cursor.execute("SELECT * FROM personal_events")
-rows = cursor.fetchall()
-print("Person x Events")
-for row in rows:
-    print(row)
-delete_person("jordipi")
-cursor.execute(f'''DELETE FROM group_roles WHERE role="Capitan"''')
-conn.commit()
+print('SHOW NOTIF JORDIPI')
+node1.show_notification(user1)
 print()
+print('SHOW NOTIF DIANECM')
+node1.show_notification(user2)
+print()
+print('SHOW NOTIF JORDIPI 1 AFTER DELETE NOTIF 1')
+node1.delete_notification(user1,1)
+node1.show_notification(user1)
 
-cursor.execute("SELECT * FROM person")
-rows = cursor.fetchall()
-print("Person")
-for row in rows:
-    print(row)
-cursor.execute("SELECT * FROM team")
-rows = cursor.fetchall()
-print("Group")
-for row in rows:
-    print(row)
-cursor.execute("SELECT * FROM group_roles")
-rows = cursor.fetchall()
-print("Roles")
-for row in rows:
-    print(row)
-cursor.execute("SELECT * FROM persons_groups")
-rows = cursor.fetchall()
-print("Person x Groups")
-for row in rows:
-    print(row)
-cursor.execute("SELECT * FROM personal_events")
-rows = cursor.fetchall()
-print("Person x Events")
-for row in rows:
-    print(row)
-conn.close()
+node1.create_group(user1,'Mala Compannia', GType.Hierarchical, 'Esto no es nah')
+node1.create_group(user2,'Buena Compannia', GType.Non_hierarchical)
+node1.create_group(user1,'Media Compannia', GType.Non_hierarchical, 'Esto no es nah')
+print()
+print('SHOW GROUP JORDIPI CREATED')
+node1.show_user_group_created(user1)
+
+node1.delete_group(user1,b'?\xe6\xc19\xa9m\xc7\xcd\xd8}\xa8\x95\xaf49\x92\xbf\x01\x1dF')
+node1.create_group(user1,'Mala Compannia', GType.Hierarchical, 'Esto no es nah')
+print()
+print('SHOW GROUP JORDIPI CREATED AFTER DELETE GROUP 1')
+node1.show_user_group_created(user1)
+
+print()
+print('SHOW GROUP DIANECM CREATED')
+node1.show_user_group_created(user2)
+
+node1.add_member_account(b'w\xd9NI\xbfi\xd9\x1f\xc4"\xf0\xa7\x91b\xe4\xd0\xfe\xff\xb0\xda',user2)
+node1.add_member_account(b'!.\x95\xe4\x9eO\xfbv\x12\x8f\xa4\xc4\r\xc5\x98\x02\x11\xf2\xafb',user2,"Capitan",15)
+node1.add_member_account(b'\xc9\x12\xab\xaf\xd7\x0fmB\xd3\x98l\xd9\x96\x8f\x03\x19X{h\xbc',user1)
+print()
+print('SHOW ALL GROUP JORDIPI BELONG')
+node1.show_user_in_group(user1)
+
+node1.create_event_personal(user1,'Boda de Primo','12/7/23-08:35','12/7/23-14:35')
+node1.create_event_personal(user1,'Cumple de Hermana','17/7/23-08:35','17/7/23-14:35')
+node1.create_event_personal(user1,'Evento Benefico','18/8/23-08:35','19/8/23-14:35')
