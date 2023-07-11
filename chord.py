@@ -296,20 +296,23 @@ class ChordNode:
     
     # LEADER process            
     def leader_labor(self):
-        last_nodeSet = None
         time.sleep(30)
         while self.leader == self.nodeID: 
-            addresses , new_nodes= self.check_network()
-            
-            if not last_nodeSet or not new_nodes == last_nodeSet:
-                notify_data(f"New nodes {addresses}","Join")
+            addresses , new_nodes = self.check_network()
+
+            if  not (new_nodes == self.nodeSet):
                 self.node_address = self.get_addresses(addresses)
                 self.nodeSet = new_nodes
+                notify_data(f"New nodes {self.node_address}","Join")
                 self.recomputeFingerTable()
+                print(self.FT)
                 #self.updates_nodeSet()
-                last_nodeSet = new_nodes
+                #last_nodeSet = new_nodes
             else: 
-                 notify_data(f"Nodes set already update","Check")
+                notify_data(f"Nodes set already update","Check")
+                notify_data(f"Nodes {self.node_address}","Join")
+                #self.recomputeFingerTable()
+                #print(self.FT)
             time.sleep(30)
 
     def check_network(self):
@@ -393,14 +396,6 @@ class ChordNode:
                     data = {"message": LOOKUP_REP, "ip": self.address.ip , "port": self.address.ports[0], "node":  nextID,"key":key}        
                     send_request((ip,int(port)),data,False)               
 
-    def update(self,data):
-                notify_data("Receiving update request","GetData")   
-                self.nodeSet = data["nodeSet"]    
-                nod_ad = data["addresses"]
-                notify_data(f"Nodes {nod_ad}","database")
-                self.node_address = self.get_addresses(data["addresses"])
-                self.recomputeFingerTable()
-
     def update_key(self,data):
                 key = data["key"]
                 value = data["value"]
@@ -457,24 +452,4 @@ class ChordNode:
          notify_data(f"Obtained {value} to {key} key","GetData")
          return value              
     
-         
-
-#######Tests###########################
-
-#node= ChordNode(Address("127.0.0.1","5050","5001"), local= True)
-#thread = threading.Thread(target=node.run)
-
-#node1= ChordNode(Address("127.0.0.1","5030","5002"), local= True)
-#thread1 = threading.Thread(target=node1.run)
-
-#node2= ChordNode(Address("127.0.0.1","5123","5006"), local= True)
-#thread2 = threading.Thread(target=node2.run)
-
-#node3= ChordNode(Address("127.0.0.1","5132","5008"), local= True)
-#thread3 = threading.Thread(target=node2.run)
-
-#thread.start()
-#thread1.start()
-#thread2.start()
-#thread3.start()
 
