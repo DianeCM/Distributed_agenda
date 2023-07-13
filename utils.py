@@ -20,7 +20,7 @@ class Address(object):
 		def __str__(self):
 			return f"tcp://{self.ip}:{self.ports[0]}"
 	
-def send_request(address,data,answer_requiered):     
+def send_request(address,data,answer_requiered,expected_zip_file):     
             sender = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             try : sender.connect(address)
             except ConnectionRefusedError as e :
@@ -37,10 +37,13 @@ def send_request(address,data,answer_requiered):
             if answer_requiered:
               try:
                 # Esperar la llegada de un mensaje
-                data = sender.recv(1000000)
-                data = data.decode('utf-8')
-                print(data)
-                data = json.loads(data) 
+                data = sender.recv(10000000)
+                if not expected_zip_file:
+                  data = data.decode('utf-8')
+                  #print(data)
+                  data = json.loads(data) 
+                else:
+                    data = b''+ data
                 sender.close()
                 return data
               except socket.timeout:

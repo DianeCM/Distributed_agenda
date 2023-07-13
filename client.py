@@ -39,13 +39,13 @@ for i in range(len(a)-1):
     address = ("127.0.0.1",int(port))
     data = {"message": SET_DATA_REQ, "ip":"127.0.0.1" , "port": "5557", "key": key , "value": value}
     print(f"Sending SET_DATA_REQ of {key}:{value} key to 127.0.0.1:{port}")
-    send_request(address,data,False)
+    send_request(address,data,False,False)
     time.sleep(4)
     
 def check_value(key,expected_value,port): 
     address = ("127.0.0.1",int(port))
     data = {"message": GET_DATA_REQ, "ip":"127.0.0.1" , "port": "5557", "key": key , "sender_addr": ("127.0.0.1",5557)}
-    send_request(address,data,False)
+    send_request(address,data,False,False)
     conn, addr = receiver.accept()
     msg=conn.recv(1024)
     msg = msg.decode('utf-8')
