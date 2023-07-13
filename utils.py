@@ -2,6 +2,7 @@ import hashlib
 from termcolor import colored
 import json
 import socket
+import zipfile
 
 def hash_key(key: str) -> int:
     """
@@ -36,7 +37,7 @@ def send_request(address,data,answer_requiered):
             if answer_requiered:
               try:
                 # Esperar la llegada de un mensaje
-                data = sender.recv(1024)
+                data = sender.recv(1000000)
                 data = data.decode('utf-8')
                 print(data)
                 data = json.loads(data) 
@@ -47,8 +48,24 @@ def send_request(address,data,answer_requiered):
                 notify_data("Tiempo de espera agotado para recibir un mensaje","Error")
             sender.close()
 
-
-
 def notify_data(data,data_type):
 	colors = {"Error":"red", "GetData": "yellow", "Join": "blue", "SetData": "magenta",'database':"green", "Check":"cyan" }
 	print(colored(data,colors[data_type]))
+        
+def convert_into_int(bytes_seq):
+    # decodifica los bytes en un entero con orden de byte 'big'
+    return int.from_bytes(bytes_seq, byteorder='big')
+
+def create_zip(zip_name,files_names):
+    # Crea un archivo ZIP llamado "datos.zip"
+    with zipfile.ZipFile(zip_name , "w") as mi_zip:
+    # Agrega subarchivos al archivo ZIP
+        for file in files_names:
+          mi_zip.write(file)
+
+def create_json_file(data,file_name):
+    json_data = json.dumps(data)
+
+    # Escribe la cadena JSON en un archivo llamado "datos.json"
+    with open(file_name, "w") as f:
+      f.write(json_data)

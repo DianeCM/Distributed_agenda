@@ -1,6 +1,7 @@
 from peewee import *
 from enum import Enum
-from utils import hash_key
+from utils import *
+import shutil
 
 class Privacity(Enum):
     Public = "Público"
@@ -110,11 +111,12 @@ class Event(Model):
         Model.save(self, *args, **kwargs)
 
 
-class NodeYumi:
+class DBModel:
     def __init__(self, id: int):
-        db_name = f"{id}.db"
-        self.database = SqliteDatabase(db_name)
-        for cls in [Account, Notification, Group, MemberGroup, MemberAccount, Event]:
+        self.db_name = f"{id}.db"
+        self.database = SqliteDatabase(self.db_name)
+        self.classes = [Account, Notification, Group, MemberGroup, MemberAccount, Event]
+        for cls in self.classes:
             cls._meta.database = self.database
             if not cls.table_exists():
                 self.database.create_tables([cls])
@@ -281,6 +283,38 @@ class NodeYumi:
             print(row)
         # Cerrar la conexion a la base de datos
         conn.close()
+
+
+    def get_filtered_db(self,condition,new_db_name):
+       # Crea una nueva base de datos
+        conn_copia = SqliteDatabase(new_db_name)
+
+        for cls in self.classes:
+            cls._meta.database = conn_copia
+            conn_copia.create_tables([cls])
+
+        for cls in self.classes:
+            cls._meta.database = self.database
+        
+        register_account = Account.select().where((condition(convert_into_int(Account.iduser))))
+        register_notification = Notification.select().where((condition(convert_into_int(Notification.user))))
+        register_group = Group.select().where((condition(convert_into_int(Group.creator))))
+        register_member = MemberGroup.select().where((condition(convert_into_int(MemberGroup.user))))
+        regsiter_event  =  Event.select().where((condition(convert_into_int(Event.user))))
+
+        shutil.copyfile('original.db',self.db_name)
+        conn_copia.close()
+
+    def replicate_db(self,db_name):
+        copy_db =  SqliteDatabase(db_name)
+
+        for cls in self.classes:
+            cls._meta.database = self.database
+            rows = list(cls.select())
+            with copy_db.atomic():
+                cls.bulk_create(rows)
+        copy_db.close()
+
 
 # TEST CASE
 user1 = hash_key("jordipi")
