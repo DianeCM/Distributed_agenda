@@ -115,7 +115,7 @@ class DBModel:
     def __init__(self, id: int):
         self.db_name = f"{id}.db"
         self.database = SqliteDatabase(self.db_name)
-        self.classes = [Account, Notification, Group, MemberGroup, MemberAccount, Event]
+        self.classes = [Account, Notification, Group, MemberAccount,MemberGroup, Event]
         for cls in self.classes:
             cls._meta.database = self.database
             if not cls.table_exists():
@@ -330,6 +330,23 @@ class DBModel:
                 cls.bulk_create(rows)
         copy_db.close()
 
+    def check_db(self):
+        registers=[]
+        for cls in self.classes:
+            cls._meta.database = self.database
+            registers.append(cls.select())
+        for reg in registers[0]:
+                print(reg.user,reg.name,reg.last,reg.passw)
+        for reg in registers[1]:
+                print(reg.user,reg.notif,reg.text)       
+        for reg in registers[2]:
+                print(reg.creator,reg.group,reg.gname,reg.gtype,reg.descr)       
+        for reg in registers[3]:
+                print(reg.user,reg.group,reg.ref)   
+        for reg in registers[4]:
+                print(reg.group,reg.user,reg.role,reg.level) 
+        for reg in registers[5]:
+                print(reg.user,reg.event,reg.ename,reg.datec,reg.datef,reg.state,reg.visib,reg.creator,reg.group)  
 
 # TEST CASE
 # user1 = hash_key("jordipi")

@@ -12,7 +12,7 @@ class User_Acccount:
         self.user_key = hash_key(user_name)
 
     def create_account(self,user_name,last_name,password):
-        data = {"message": CREATE_PROFILE, "ip":"127.0.0.1" , "port": "5557", "hash_key": self.user_key ,"user_name": user_name , "last_name":last_name , "password":password  }
+        data = {"message": CREATE_PROFILE, "ip":"127.0.0.1" , "port": "5557", "user_key": self.user_key ,"user_name": user_name , "last_name":last_name , "password":password  }
         address = ("127.0.0.1",int(ports[0]))
         print(f"Sending CREATE_PROFILE request to 127.0.0.1:{ports[0]}")
         send_request(address,data,False,False)
@@ -26,3 +26,5 @@ class User_Acccount:
     def get_user_eventes(self,user_key,date_time):
         pass
 
+p = User_Acccount("Danilo")
+p.create_account("Danilo","Perez","anymore")

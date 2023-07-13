@@ -34,22 +34,32 @@ def send_request(address,data,answer_requiered,expected_zip_file):
 
             #print("Sending Message")
             sender.send(json_data)
+
             if answer_requiered:
               try:
                 # Esperar la llegada de un mensaje
-                data = sender.recv(10000000)
+                
                 if not expected_zip_file:
+                  data = sender.recv(1024)
                   data = data.decode('utf-8')
-                  #print(data)
                   data = json.loads(data) 
+                  sender.close()
                 else:
-                    data = b''+ data
-                sender.close()
-                return data
+                    data= False
+                    f = open("copia.db",'wb') #open in binary     
+                        # receive data and write it to file
+                    l = sender.recv(1024)
+                    
+                    while (l):
+                          data = True
+                          f.write(l)
+                          l = sender.recv(1024)
+                    f.close()
               except socket.timeout:
                 # Manejar la excepción si se agotó el tiempo de espera
-                notify_data("Tiempo de espera agotado para recibir un mensaje","Error")
+                if not expected_zip_file or not data: notify_data("Tiempo de espera agotado para recibir un mensaje","Error")
             sender.close()
+            return data 
 
 def notify_data(data,data_type):
 	colors = {"Error":"red", "GetData": "yellow", "Join": "blue", "SetData": "magenta",'database':"green", "Check":"cyan" }
