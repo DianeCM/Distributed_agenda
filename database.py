@@ -17,17 +17,17 @@ class State(Enum):
     Personal = "Personal"
 
 class Account(Model):
-    user = BlobField(null=False, unique=True, primary_key=True)
+    user = CharField(max_length=70,null=False, unique=True, primary_key=True)
     name = CharField(max_length=15, null=False)
-    last = CharField(max_length=40, null=False)
-    passw = CharField(max_length=50, null=False)
+    last = CharField(max_length=50, null=False)
+    passw = CharField(max_length=40, null=False)
 
     class Meta:
         database = None
 
 
 class Notification(Model):
-    user = BlobField(null=False)
+    user = CharField(max_length=70,null=False)
     notif = BigIntegerField(null=False)
     text = CharField(max_length=300)
 
@@ -44,8 +44,8 @@ class Notification(Model):
 
 
 class Group(Model):
-    creator = BlobField(null=False)
-    group = BlobField(null=False, unique=True, primary_key=True)
+    creator = CharField(max_length=70,null=False)
+    group = CharField(max_length=70,null=False, unique=True, primary_key=True)
     gname = CharField(max_length=50, null=False)
     gtype = CharField(max_length=15, null=False)
     descr = CharField(max_length=100, null=True)
@@ -57,17 +57,18 @@ class Group(Model):
     def save(self, *args, **kwargs):
         if self.group is None:
             idcurrent = Group._meta.autoincremental
-            creator = int.from_bytes(self.creator,byteorder='big')
+            creator = int(self.creator)
             idcurrent = hash_key(f'{creator}_{idcurrent}')
-            self.group = idcurrent.to_bytes(20, byteorder='big')
+            self.group = str(idcurrent)
             Group._meta.autoincremental += 1
         Model.save(self, *args, **kwargs)
 
 
 class MemberAccount(Model):
-    user = BlobField(null=False)
-    group = BlobField(null=False)
-    ref = BlobField(null=False)
+    user = CharField(max_length=70,null=False)
+    group = CharField(max_length=70,null=False)
+    gtype = CharField(max_length=15, null=False)
+    ref = CharField(max_length=70,null=False)
 
     class Meta:
         database = None
@@ -75,8 +76,8 @@ class MemberAccount(Model):
 
 
 class MemberGroup(Model):
-    group = BlobField(null=False)
-    user = BlobField(null=False)
+    group = CharField(max_length=70,null=False)
+    user = CharField(max_length=70,null=False)
     role = CharField(max_length=50, null=False)
     level = IntegerField(null=False)
 
@@ -86,15 +87,15 @@ class MemberGroup(Model):
 
 
 class Event(Model):
-    user = BlobField(null=False)
-    event = BlobField(null=False)
+    user = CharField(max_length=70,null=False)
+    event = CharField(max_length=70,null=False)
     ename = CharField(max_length=100, null=False)
     datec = DateTimeField(null=False)
     datef = DateTimeField(null=False)
     state = CharField(max_length=9, null=False)
     visib = CharField(max_length=9, null=False)
-    creator = BlobField(null=False)
-    group = BlobField(null=True)
+    creator = CharField(max_length=70,null=False)
+    group = CharField(max_length=70,null=True)
     
     class Meta:
         database = None
@@ -104,9 +105,9 @@ class Event(Model):
     def save(self, *args, **kwargs):
         if not self.event:
             idcurrent = Event._meta.autoincremental
-            user = int.from_bytes(self.user,byteorder='big')
+            user = int(self.user)
             idcurrent = hash_key(f'{user}_{idcurrent}')
-            self.event = idcurrent.to_bytes(20, byteorder='big')
+            self.event = str(idcurrent)
             Event._meta.autoincremental += 1
         Model.save(self, *args, **kwargs)
 
@@ -122,10 +123,17 @@ class DBModel:
                 self.database.create_tables([cls])
 
     def create_account(self, userkey: int, name: str, last_name: str, password: str):
-        userkey = userkey.to_bytes(20, byteorder='big')
-        account = Account.create(user=userkey, name=name, last=last_name, passw=password)
+        userkeyn = str(userkey)
+        account = Account.create(user=userkeyn, name=name, last=last_name, passw=password)
         account.save()
 
+    def get_account(self, userkey: int, password: str):
+        userkeyn = str(userkey)
+        try: user = Account.get((Account.user == userkeyn) & (Account.passw == password))
+        except DoesNotExist: return False # DATA => MESS=FALSE, NAME=NONE, LASTNAME=NONE
+        return True, user.name, user.last
+
+    # PENDIENTE A CORREGIR
     def delete_account(self, userkey: int):
         userkey = userkey.to_bytes(20, byteorder='big')
         Account.delete().where(Account.user==userkey).execute()
@@ -143,28 +151,27 @@ class DBModel:
         # BORRAR LOS GRUPOS QUE CREO Y POR CADA UNO DE ESTOS GRUPOs (A CADA UNO DE SUS MIEMBROS ELIMINAR PERTENENCIA GRUPO)
         # ELIMINAR DE LOS GRUPOS QUE LO TIENEN COMO MIEMBRO
 
-
     def add_notification(self, userkey: int, text: str, notif: int = None):
-        userkey = userkey.to_bytes(20, byteorder='big')
-        try: Account.get(user=userkey)
+        userkeyn = str(userkey)
+        try: Account.get(user=userkeyn)
         except DoesNotExist: return
-        notif = Notification.create(user=userkey, notif=notif, text=text)
+        notif = Notification.create(user=userkeyn, notif=notif, text=text)
         notif.save()
 
     def show_notification(self, userkey: int):
-        userkey = userkey.to_bytes(20, byteorder='big')
-        registers = Notification.select().where(Notification.user == userkey).order_by(Notification.notif.desc())
+        userkeyn = str(userkey)
+        registers = Notification.select().where(Notification.user == userkeyn).order_by(Notification.notif.desc())
         for register in registers:
             print(register.notif, register.text)
 
     def delete_notification(self, userkey: int, notif: int):
-        userkey = userkey.to_bytes(20, byteorder='big')
-        try: notif = Notification.get((Notification.user == userkey) & (Notification.notif == notif))
+        userkeyn = str(userkey)
+        try: notif = Notification.get((Notification.user == userkeyn) & (Notification.notif == notif))
         except DoesNotExist: return
         notif.delete_instance(recursive=True)
 
-    def create_group(self, userkey:int, name: str, gtype: GType, description: str = "", group: bytes = None):
-        userkeyn = userkey.to_bytes(20, byteorder='big')
+    def create_group(self, userkey:int, name: str, gtype: GType, description: str = "", group: str = None):
+        userkeyn = str(userkey)
         try: Account.get(user=userkeyn)
         except DoesNotExist: return
         group = Group.create(creator=userkeyn, group=group, gname=name, gtype=gtype.value, description=description)
@@ -349,11 +356,11 @@ class DBModel:
                 print(reg.user,reg.event,reg.ename,reg.datec,reg.datef,reg.state,reg.visib,reg.creator,reg.group)  
 
 # TEST CASE
-# user1 = hash_key("jordipi")
-# user2 = hash_key("dianecm")
-# node1 = DBModel(hash_key("12345654535653555525625363565464473763563"))
-# node1.create_account(user1,"Jordan", "Pla Gonzalez","esmionotuyo")
-# node1.create_account(user2,"Dianelys", "Cruz Mengana","mecagoento")
+user1 = hash_key("jordipi")
+user2 = hash_key("dianecm")
+node1 = DBModel(hash_key("12345654535653555525625363565464473763563"))
+node1.create_account(user1,"Jordan", "Pla Gonzalez","esmionotuyo")
+node1.create_account(user2,"Dianelys", "Cruz Mengana","mecagoento")
 
 # node1.add_notification(user1,"Tienes un evento que colisiona")
 # node1.add_notification(user1,"Tienes pendiente de aceptacion un evento")
@@ -371,11 +378,11 @@ class DBModel:
 # node1.delete_notification(user1,1)
 # node1.show_notification(user1)
 
-# node1.create_group(user1,'Mala Compannia', GType.Hierarchical, 'Esto no es nah')
-# node1.create_group(user2,'Buena Compannia', GType.Non_hierarchical)
-# node1.create_group(user1,'Media Compannia', GType.Non_hierarchical, 'Esto no es nah')
-# print()
-# print('SHOW GROUP JORDIPI CREATED')
+node1.create_group(user1,'Mala Compannia', GType.Hierarchical, 'Esto no es nah')
+node1.create_group(user2,'Buena Compannia', GType.Non_hierarchical)
+node1.create_group(user1,'Media Compannia', GType.Non_hierarchical, 'Esto no es nah')
+print()
+print('SHOW GROUP JORDIPI CREATED')
 # node1.show_group_belong_to(user1)
 
 # node1.delete_group(user1,b'?\xe6\xc19\xa9m\xc7\xcd\xd8}\xa8\x95\xaf49\x92\xbf\x01\x1dF')
