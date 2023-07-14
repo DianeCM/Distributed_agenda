@@ -301,21 +301,23 @@ class DBModel:
 
 
     def get_filtered_db(self,condition,new_db_name):
-       # Crea una nueva base de datos
+        registers = {}
+        for cls in self.classes:
+            cls._meta.database = self.database
+            registers[cls] = cls.select().where((condition(int(cls.user))))
+            
+        registers.append(Account.select().where((condition(Account.user))))
+        registers.append(Notification.select().where((condition(Notification.user))))
+        registers.append(Group.select().where((condition(Group.creator))))
+        registers.append(MemberGroup.select().where((condition(MemberGroup.user))))
+        regsiter_event  =  Event.select().where((condition(Event.user)))
+
+         # Crea una nueva base de datos
         conn_copia = SqliteDatabase(new_db_name)
 
         for cls in self.classes:
             cls._meta.database = conn_copia
             conn_copia.create_tables([cls])
-
-        for cls in self.classes:
-            cls._meta.database = self.database
-        
-        register_account = Account.select().where((condition(Account.user)))
-        register_notification = Notification.select().where((condition(Notification.user)))
-        register_group = Group.select().where((condition(Group.creator)))
-        register_member = MemberGroup.select().where((condition(MemberGroup.user)))
-        regsiter_event  =  Event.select().where((condition(Event.user)))
 
         shutil.copyfile(self.db_name,new_db_name)
         conn_copia.close()

@@ -187,11 +187,9 @@ class ChordNode:
                 
     def index_data(self,msg,get_data):
         start_index = msg["startID"] if get_data else self.Predecessor
-        end_index = msg["nodeID"]    if get_data else self.nodeID
-        response = MOV_DATA_REP if get_data else REP_DATA_REP
-        condition = lambda id : start_index <= id < end_index
-        if start_index > end_index: 
-            condition = lambda id : ( start_index <= id if get_data else id < end_index)
+        end_index =   msg["nodeID"]  if get_data else self.nodeID
+        print(start_index,end_index)
+        condition = lambda id : self.inbetween(id,start_index,end_index)
         self.db.get_filtered_db(condition,'copia.db')
 
 
@@ -298,6 +296,7 @@ class ChordNode:
         if successfull:
             update_method('copia.db')
             notify_data(f"Data updated","database")
+            self.db.check_db()
             os.remove('copia.db')
 
 
