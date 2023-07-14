@@ -2,16 +2,6 @@ import os
 import time
 #from app import *
 
-# EN ESTA PARTE SOLO TENGO QUE MUESTRE LAS COSAS Y LAS CREE
-#*************************VISTAS RESTANTES*********************************
-# ME FALTA EN LA PARTE DE GRUPOS, OPCION DE CREAR EVENTOS
-# SOLICITAR MIEMBROS DE NIVEL MENOR EN GRUPOS JERARQUICOS
-# DE ESTOS MIEMBROS PODER VER SUS EVENTOS
-
-# EN LAS NOTIFICACIONES AGREGAR OPCION DE ELIMINARLAS
-# EN LOS GRUPOS LA OPCION DE ELIMINARLOS O SALIRSE
-# EN LOS EVENTOS LA OPCION DE ELIMINARLOS (LOS PERSONALES), ACEPTARLOS/RECHAZARLOS (LOS PENDIENTES)
-
 class System:
     def show_home(self):
         os.system('cls')
@@ -59,6 +49,9 @@ class System:
         for (notif,text) in notifications:
             print(f"{notif} {text}")
         print("")
+        print("")
+        print("1. Eliminar notificación <id>")
+        print("")
         print("<back>: regresar al perfil")
         print("<home>: volver a la vista principal")
         print("<exit>: cerrar la aplicación")
@@ -76,6 +69,11 @@ class System:
         for (notif,text) in events:
             print(f"{notif} {text}")
         print("")
+        print("")
+        print("1. Eliminar evento (personal o creado) <idevent>")
+        print("2. Aceptar evento (pendiente) <idevent>")
+        print("3. Rechazar evento (pendiente) <idevent>")
+        print("")
         print("<back>: regresar al perfil")
         print("<home>: volver a la vista principal")
         print("<exit>: cerrar la aplicación")
@@ -92,6 +90,33 @@ class System:
         print("")
         for (notif,text) in groups:
             print(f"{notif} {text}")
+        print("")
+        print("")
+        print("1. Crear evento grupal <idgroup>")
+        print("2. Agregar miembros (grupo creado/usuario existente) <idgroup> <iduser>")
+        print("3. Solicitar miembros jerárquicamente inferior <idgroup>")
+        print("")
+        print("<back>: regresar al perfil")
+        print("<home>: volver a la vista principal")
+        print("<exit>: cerrar la aplicación")
+
+    def show_member(self, name, last_name, creator, gname, members):
+        os.system('cls')
+        print("******************************************************************************************************")
+        print("*                                                                                                    *")
+        print("*                            Miembros Jerárquicamente Inferiores                                     *")
+        print("*                                                                                                    *")
+        print("******************************************************************************************************")
+        print(f"Nombre: {name}")
+        print(f"Apellidos: {last_name}")
+        print(f"Creador: {creator}")
+        print(f"Nombre de Grupo:{gname}")
+        print("")
+        for (notif,text) in members:
+            print(f"{notif} {text}")
+        print("")
+        print("")
+        print("1. Solicitar eventos de miembro <idmember>")
         print("")
         print("<back>: regresar al perfil")
         print("<home>: volver a la vista principal")
