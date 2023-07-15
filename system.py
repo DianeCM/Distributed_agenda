@@ -122,7 +122,7 @@ class System:
         print("<exit>: cerrar la aplicación")
 
     def start_console(self):
-        user = User_Acccount()
+        user = Client()
         while True:
             self.show_home()
             line_char = "> "

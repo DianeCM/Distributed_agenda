@@ -70,7 +70,8 @@ class ChordNode:
     
     @property 
     def Req_Method(self):
-        return { CREATE_PROFILE: self.create_account , CREATE_GROUP: self.create_group , CREATE_EVENT: self.create_event}
+        return { CREATE_PROFILE: self.create_account , CREATE_GROUP: self.create_group , CREATE_EVENT: self.create_event, REP_PROFILE: self.create_account,
+                GET_PROFILE: self.get_account}
     
     @property
     def Serialize_Address(self):
@@ -365,12 +366,17 @@ class ChordNode:
            
             if request == STOP: 
                 break
-            elif request == SET_REP_DATA_REQ:
-                self.set_data(data)
             elif request in self.Req_Method.keys():
-                if not self.leader == self.nodeID: self.get_nodes()   
-                self.update_key(data,request,addr)
-                
+                notify_data(f"Receiving {request} from {addr}","SetData")
+                if 30 <= int(request) < 50:
+                    if not self.leader == self.nodeID: self.get_nodes()   
+                    if int(request)%2 ==0 :self.update_key(data,request,addr)
+                    else: 
+                        self.Req_Method[request](data)
+                        self.db.check_db()
+                if 60 <= int(request) < 70:
+                   if not self.leader == self.nodeID: self.get_nodes()
+                   self.get_key(data,request,addr)
 
             #elif request == LOOKUP_REQ: 
             #   if not self.leader == self.nodeID: self.get_nodes()                  # A lookup request #-
@@ -408,14 +414,10 @@ class ChordNode:
 
     def update_key(self,data,request,addr):
                 key = data["user_key"]
-                ip = data["ip"]
-                port = data["port"]
-            
-                notify_data(f"Receiving {request} from {addr}","SetData")
                 nextID = self.localSuccNode(key)          # look up next node #-
                 
                 if not nextID == self.nodeID :
-                    data = {"message": request, "ip": ip , "port": self.address.ports[0], "key": key } # send to succ                    
+                    #data = {"message": request, "ip": ip , "port": self.address.ports[0], "user_key": key } # send to succ                    
                     notify_data(f"Sending {request}  to {nextID}: {str(self.node_address[nextID])} node ","SetData")
                     send_request((self.node_address[nextID].ip,int(self.node_address[nextID].ports[0])),data,False,False)
                 else :
@@ -423,27 +425,23 @@ class ChordNode:
                     self.db.check_db()
                     next_node = self.FT[1]
                     if not self.nodeID == next_node:
-                        notify_data(f"Sending {request} to {next_node}","SetData")
-                        data = {"message": str(int(request)+1), "ip": self.address.ip , "port": self.address.ports[0], "node":  nextID,"key":key}
+                        notify_data(f"Sending {int(request)+1} to {next_node}","SetData")
+                        #data = {"message": str(int(request)+1), "ip": self.address.ip , "port": self.address.ports[0], "node":  nextID,"user_key":key}
+                        data["message"] = str(int(request)+1)
                         send_request((self.node_address[next_node].ip,int(self.node_address[next_node].ports[0])),data,False,False)  
 
-    def get_key(self,data,addr):
-                ip = data["ip"]
-                port = data["port"]            
+    def get_key(self,data,request):            
                 key = data["key"]
                 sender_addr = data["sender_addr"]
-                notify_data(f"Receiving GET_DATA_REQ of {key} key from {sender_addr}","GetData")
                 nextID = self.localSuccNode(key)          # look up next node #-
-
                 if not nextID == self.nodeID :
-
-                    data = {"message": GET_DATA_REQ, "ip": ip , "port": port, "key": key,"sender_addr":sender_addr } # send to succ 
+                    #data = {"message": request, "ip": ip , "port": port, "key": key,"sender_addr":sender_addr } # send to succ 
                     send_request((self.node_address[nextID].ip,int(self.node_address[nextID].ports[0])),data,False,False)
-                    notify_data(f"Sending GET_DATA_REQ of {key} to {nextID} node : {str(self.node_address[nextID])} ","GetData")
+                    notify_data(f"Sending {request} to {nextID} node : {str(self.node_address[nextID])} ","GetData")
                 else:
-                    value = self.get_data(data)
-                    data = {"message": GET_DATA_REP, "ip": self.address.ip , "port": self.address.ports[0], "node":  nextID,"value": value}
-                    notify_data(f"Sending  GET_DATA_REP to {sender_addr} value: {value}","GetData")
+                    self.Req_Method[request](data)
+                    data = self.get_data(data,int(request)+1)
+                    notify_data(f"Sending  {int(request)+1} to {sender_addr}","GetData")
                     send_request((sender_addr[0],sender_addr[1]),data,False,False)
                     
     def set_data(self,data):
@@ -464,6 +462,14 @@ class ChordNode:
     def create_account(self,data):
         self.db.create_account(data["user_key"],data["user_name"],data["last_name"],data["password"])
 
+    def get_account(self,data,response):
+        user_name,last_name=self.db.get_account(data["user_key"],data["password"])
+        resp_data = {"message": str(response),'user_name':user_name,'last_name':last_name}
+        resp_data["ip"] = data["ip"] 
+        resp_data["port"] = data["port"] 
+        resp_data["sender_addr"] = resp_data["sender_addr"]
+        return resp_data
+    
     def create_group(self,data):
         self.db.create_account(hash_key(data["user_name"]),data["user_name"],data["last_name"],data["password"])
     
