@@ -48,7 +48,6 @@ class Group(Model):
     group = CharField(max_length=70,null=False, unique=True, primary_key=True)
     gname = CharField(max_length=50, null=False)
     gtype = CharField(max_length=15, null=False)
-    descr = CharField(max_length=100, null=True)
 
     class Meta:
         database = None
@@ -67,6 +66,7 @@ class Group(Model):
 class MemberAccount(Model):
     user = CharField(max_length=70,null=False)
     group = CharField(max_length=70,null=False)
+    gname = CharField(max_length=50, null=False)
     gtype = CharField(max_length=15, null=False)
     ref = CharField(max_length=70,null=False)
 
@@ -356,11 +356,11 @@ class DBModel:
                 print(reg.user,reg.event,reg.ename,reg.datec,reg.datef,reg.state,reg.visib,reg.creator,reg.group)  
 
 # TEST CASE
-user1 = hash_key("jordipi")
-user2 = hash_key("dianecm")
-node1 = DBModel(hash_key("12345654535653555525625363565464473763563"))
-node1.create_account(user1,"Jordan", "Pla Gonzalez","esmionotuyo")
-node1.create_account(user2,"Dianelys", "Cruz Mengana","mecagoento")
+# user1 = hash_key("jordipi")
+# user2 = hash_key("dianecm")
+# node1 = DBModel(hash_key("12345654535653555525625363565464473763563"))
+# node1.create_account(user1,"Jordan", "Pla Gonzalez","esmionotuyo")
+# node1.create_account(user2,"Dianelys", "Cruz Mengana","mecagoento")
 
 # node1.add_notification(user1,"Tienes un evento que colisiona")
 # node1.add_notification(user1,"Tienes pendiente de aceptacion un evento")
@@ -378,11 +378,11 @@ node1.create_account(user2,"Dianelys", "Cruz Mengana","mecagoento")
 # node1.delete_notification(user1,1)
 # node1.show_notification(user1)
 
-node1.create_group(user1,'Mala Compannia', GType.Hierarchical, 'Esto no es nah')
-node1.create_group(user2,'Buena Compannia', GType.Non_hierarchical)
-node1.create_group(user1,'Media Compannia', GType.Non_hierarchical, 'Esto no es nah')
-print()
-print('SHOW GROUP JORDIPI CREATED')
+# node1.create_group(user1,'Mala Compannia', GType.Hierarchical, 'Esto no es nah')
+# node1.create_group(user2,'Buena Compannia', GType.Non_hierarchical)
+# node1.create_group(user1,'Media Compannia', GType.Non_hierarchical, 'Esto no es nah')
+# print()
+# print('SHOW GROUP JORDIPI CREATED')
 # node1.show_group_belong_to(user1)
 
 # node1.delete_group(user1,b'?\xe6\xc19\xa9m\xc7\xcd\xd8}\xa8\x95\xaf49\x92\xbf\x01\x1dF')
