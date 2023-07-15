@@ -48,7 +48,6 @@ class Group(Model):
     group = CharField(max_length=70,null=False, unique=True, primary_key=True)
     gname = CharField(max_length=50, null=False)
     gtype = CharField(max_length=15, null=False)
-    descr = CharField(max_length=100, null=True)
 
     class Meta:
         database = None
@@ -67,6 +66,7 @@ class Group(Model):
 class MemberAccount(Model):
     user = CharField(max_length=70,null=False)
     group = CharField(max_length=70,null=False)
+    gname = CharField(max_length=50, null=False)
     gtype = CharField(max_length=15, null=False)
     ref = CharField(max_length=70,null=False)
 
@@ -306,7 +306,6 @@ class DBModel:
         # Cerrar la conexion a la base de datos
         conn.close()
 
-
     def filter_function(self,condition,cls):
             def cond(row):
                 key = row.user if not cls == Group else row.creator
@@ -391,11 +390,11 @@ class DBModel:
                 print(reg.user,reg.event,reg.ename,reg.datec,reg.datef,reg.state,reg.visib,reg.creator,reg.group)  
 
 # TEST CASE
-#user1 = hash_key("jordipi")
-#user2 = hash_key("dianecm")
-#node1 = DBModel(hash_key("12345654535653555525625363565464473763563"))
-#node1.create_account(user1,"Jordan", "Pla Gonzalez","esmionotuyo")
-#node1.create_account(user2,"Dianelys", "Cruz Mengana","mecagoento")
+# user1 = hash_key("jordipi")
+# user2 = hash_key("dianecm")
+# node1 = DBModel(hash_key("12345654535653555525625363565464473763563"))
+# node1.create_account(user1,"Jordan", "Pla Gonzalez","esmionotuyo")
+# node1.create_account(user2,"Dianelys", "Cruz Mengana","mecagoento")
 
 # node1.add_notification(user1,"Tienes un evento que colisiona")
 # node1.add_notification(user1,"Tienes pendiente de aceptacion un evento")
