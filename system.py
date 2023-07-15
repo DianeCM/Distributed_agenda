@@ -1,6 +1,5 @@
 import os
-import time
-#from app import *
+from app import *
 
 class System:
     def show_home(self):
@@ -123,17 +122,18 @@ class System:
         print("<exit>: cerrar la aplicación")
 
     def start_console(self):
+        user = User_Acccount()
         while True:
             self.show_home()
             line_char = "> "
             line = input(line_char)
             if line == "2":
-                os.system('cls')
                 while line == "2":
+                    os.system('cls')
+                    print("<home>: volver a la vista principal")
+                    print("<exit>: cerrar la aplicación")
+                    print("")
                     while line == "2":
-                        print("<home>: volver a la vista principal")
-                        print("<exit>: cerrar la aplicación")
-                        print("")
                         print("Nombre de usuario:")
                         username = input(line_char)
                         if username == "": continue
@@ -170,18 +170,20 @@ class System:
                         break
                     if line != "2": break
                     if password == password2:
+                        user.create_account(username,name,last_name,password)
                         print("Cuenta creada correctamente")
-                        # Guardar en BD
+                        time.sleep(2)
                         line = "home"
                     else: 
                         print("No coinciden las contraseñas. Inténtelo de nuevo")
+                        time.sleep(2)
             elif line == "1":
-                os.system('cls')
                 while line == "1":
+                    os.system('cls')
+                    print("<home>: volver a la vista principal")
+                    print("<exit>: cerrar la aplicación")
+                    print("")
                     while line == "1":
-                        print("<home>: volver a la vista principal")
-                        print("<exit>: cerrar la aplicación")
-                        print("")
                         print("Nombre de usuario:")
                         username = input(line_char)
                         if username == "": continue
@@ -196,25 +198,74 @@ class System:
                         elif password == "home": line = "home"
                         break
                     if line == "1":
-                        name = None
-                        last_name = None
+                        name, last_name = user.get_account(username, password)
+                        name = "Diane"
+                        last_name = "Cruz Mengana"
                         # CONECTO A LA BASE DE DATOS Y HALLO LA FILA QUE TIENE (SI EXISTE) <username> y <password>
                         # RECOJO DE LA INSTANCIA <name> y <last_name>
-                        name = "Dianelys" # Esto lo da la BD
-                        last_name = "Cruz Mengana" # Esto tambien lo da la BD
                         if name and last_name: # En realidad la condicion es que el <username> y <password> esten en la BD
                             # SE CONECTA AL SERVIDOR: lo escog o se le asigna??????
                             while True:
                                 self.show_profile(name, last_name)
                                 line = input(line_char)
                                 if line == "1": 
-                                    while True:    
-                                        line = input(line_char)
-                                        if line == "exit": line = "exit"
-                                        if line == "home": line = "home"
-                                        if line == "back": line = "back"
+                                    while line == "1":
+                                        os.system('cls')
+                                        print("<back>: regresar al perfil")
+                                        print("<home>: volver a la vista principal")
+                                        print("<exit>: cerrar la aplicación")
+                                        print("")
+                                        while line == "1":
+                                            print("Nombre de evento:")
+                                            ename = input(line_char)
+                                            if ename == "": continue
+                                            elif ename == "exit": line = "exit"
+                                            elif ename == "home": line = "home"
+                                            elif ename == "back": line = "back"
+                                            break
+                                        while line == "1":
+                                            print("Fecha inicial:")
+                                            print("formato: <Y/M/D-HH:MM> - 24 Horas")
+                                            date_ini = input(line_char)
+                                            if date_ini == "": continue
+                                            elif date_ini == "exit": line = "exit"
+                                            elif date_ini == "home": line = "home"
+                                            elif date_ini == "back": line = "back"
+                                            break
+                                        while line == "1":
+                                            print("Fecha final:")
+                                            print("formato: <Y/M/D-HH:MM> - 24 Horas")
+                                            date_end = input(line_char)
+                                            if date_end == "": continue
+                                            elif date_end == "exit": line = "exit"
+                                            elif date_end == "home": line = "home"
+                                            elif date_end == "back": line = "back"
+                                            break
+                                        if line != "1": break
+                                        if date_end < date_ini: 
+                                            print("Las fechas proporcionadas son incorrectas. Inténtelo de nuevo")
+                                            time.sleep(2)
+                                            continue
+                                        while line == "1":
+                                            print("Privacidad:")
+                                            print("1. Privado")
+                                            print("2. Público")
+                                            privacity = input(line_char)
+                                            if privacity == "": continue
+                                            elif privacity == "exit": line = "exit"
+                                            elif privacity == "home": line = "home"
+                                            elif privacity == "back": line = "back"
+                                            elif privacity == "1": privacity = Privacity.Private
+                                            elif privacity == "2": privacity = Privacity.Public
+                                            else: continue
+                                            break
+                                        if line != "1": break
+                                        user.create_personal_event(ename, date_ini, date_end, privacity)
+                                        print("Evento personal creado correctamente")
+                                        time.sleep(2)
                                         break
                                 if line == "2":
+                                    # print("2. Crear Grupo")
                                     while True:
                                         line = input(line_char)
                                         if line == "exit": line = "exit"
@@ -222,6 +273,7 @@ class System:
                                         if line == "back": line = "back"
                                         break
                                 if line == "3": 
+                                    # print("3. Notificaciones")
                                     while True:
                                         notifications = None # Buscar en la BD
                                         self.show_notification(name, last_name, notifications)
@@ -231,6 +283,7 @@ class System:
                                         if line == "back": line = "back"
                                         break
                                 if line == "4":
+                                    # print("4. Eventos")
                                     while True:
                                         events = None # Buscar en la BD
                                         self.show_event(name, last_name, events)
@@ -240,6 +293,7 @@ class System:
                                         if line == "back": line = "back"
                                         break
                                 if line == "5":
+                                    # print("5. Grupos")
                                     while True:
                                         groups = None # Buscar en la BD
                                         self.show_group(name, last_name, groups)
@@ -260,7 +314,7 @@ class System:
                                         if line == "exit" or line == "home" or line == "back": break
                                         if line != "Y" and line != "N": continue
                                         if line == "Y":
-                                            # Borrar de la BD este usuario
+                                            user.delete_account()
                                             line = "home"
                                             break
                                         if line == "N": break
@@ -268,6 +322,7 @@ class System:
                                 if line == "exit" or line == "home": break
                         else:
                             print("Su nombre de usuario o contraseña son incorrectas. Inténtelo de nuevo")
+                            time.sleep(2)
                     if line == "exit" or line == "home": break
                 if line == "exit": break 
             if line == "exit": break
