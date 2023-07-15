@@ -189,7 +189,7 @@ class ChordNode:
         start_index = msg["startID"] if get_data else self.Predecessor
         end_index =   msg["nodeID"]  if get_data else self.nodeID
         print(start_index,end_index)
-        condition = lambda id : self.inbetween(id,start_index,end_index)
+        condition = lambda id : self.inbetween(int(id),start_index,end_index)
         self.db.get_filtered_db(condition,'copia.db')
 
 
@@ -424,7 +424,7 @@ class ChordNode:
                     next_node = self.FT[1]
                     if not self.nodeID == next_node:
                         notify_data(f"Sending {request} to {next_node}","SetData")
-                        data = {"message": request+1, "ip": self.address.ip , "port": self.address.ports[0], "node":  nextID,"key":key}
+                        data = {"message": str(int(request)+1), "ip": self.address.ip , "port": self.address.ports[0], "node":  nextID,"key":key}
                         send_request((self.node_address[next_node].ip,int(self.node_address[next_node].ports[0])),data,False,False)  
 
     def get_key(self,data,addr):

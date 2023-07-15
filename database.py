@@ -307,17 +307,33 @@ class DBModel:
         conn.close()
 
 
+    def filter_function(self,condition,cls):
+            def cond(row):
+                key = row.user if not cls == Group else row.creator
+                return condition(int(key))
+            return cond 
+    
     def get_filtered_db(self,condition,new_db_name):
+
+        """ registers = {}
+        for cls in self.classes:
+            cls._meta.database = self.database
+            if lwb <= upb:
+                if not cls == Group:
+                    registers[cls] = cls.select().where((lwb <= cls.user) & (cls.user < upb ))      
+                else: 
+                    registers[cls] = cls.select().where((lwb <= cls.creator) & (cls.creator < upb ))                                                         
+            else:                                                                                                        
+                if not cls == Group:
+                    registers[cls] = cls.select().where(((lwb <= cls.user) & (cls.user < upb + MAXPROC)) | ((lwb <= cls.user + MAXPROC) & (cls.user < upb)))
+                else: 
+                    registers[cls] = cls.select().where(((lwb <= cls.creator) & (cls.creator < upb + MAXPROC)) | ((lwb <= cls.creator + MAXPROC) & (cls.creator < upb)))
+            """
         registers = {}
         for cls in self.classes:
             cls._meta.database = self.database
-            registers[cls] = cls.select().where((condition(int(cls.user))))
-            
-        registers.append(Account.select().where((condition(Account.user))))
-        registers.append(Notification.select().where((condition(Notification.user))))
-        registers.append(Group.select().where((condition(Group.creator))))
-        registers.append(MemberGroup.select().where((condition(MemberGroup.user))))
-        regsiter_event  =  Event.select().where((condition(Event.user)))
+            registers[cls] = cls.select()
+
 
          # Crea una nueva base de datos
         conn_copia = SqliteDatabase(new_db_name)
@@ -325,18 +341,35 @@ class DBModel:
         for cls in self.classes:
             cls._meta.database = conn_copia
             conn_copia.create_tables([cls])
-
-        shutil.copyfile(self.db_name,new_db_name)
-        conn_copia.close()
-
-    def replicate_db(self,db_name):
-        copy_db =  SqliteDatabase(db_name)
+            with conn_copia.atomic():
+                for origen_row in registers[cls]:
+                    if ((not (cls == Group)) and condition(origen_row.user)) or ((cls == Group) and condition(origen_row.creator)):
+                        dest_row = cls.create(**origen_row.__dict__)
+                        dest_row.save()
+                        
+        reg = Account.select()
+        for r in reg:
+            print(r.name)
 
         for cls in self.classes:
             cls._meta.database = self.database
-            rows = list(cls.select())
-            with copy_db.atomic():
-                cls.bulk_create(rows)
+    
+        conn_copia.close()
+       
+
+    def replicate_db(self,db_name):
+        registers ={}
+        copy_db =  SqliteDatabase(db_name)
+        for cls in self.classes:
+            cls._meta.database = copy_db
+            registers[cls] = cls.select()
+
+        for cls in self.classes:
+            cls._meta.database = self.database
+            with self.database.atomic():
+                for row in registers[cls]:
+                    dest_row = cls.create(**row.__dict__)
+                    dest_row.save()
         copy_db.close()
 
     def check_db(self):
@@ -358,11 +391,11 @@ class DBModel:
                 print(reg.user,reg.event,reg.ename,reg.datec,reg.datef,reg.state,reg.visib,reg.creator,reg.group)  
 
 # TEST CASE
-user1 = hash_key("jordipi")
-user2 = hash_key("dianecm")
-node1 = DBModel(hash_key("12345654535653555525625363565464473763563"))
-node1.create_account(user1,"Jordan", "Pla Gonzalez","esmionotuyo")
-node1.create_account(user2,"Dianelys", "Cruz Mengana","mecagoento")
+#user1 = hash_key("jordipi")
+#user2 = hash_key("dianecm")
+#node1 = DBModel(hash_key("12345654535653555525625363565464473763563"))
+#node1.create_account(user1,"Jordan", "Pla Gonzalez","esmionotuyo")
+#node1.create_account(user2,"Dianelys", "Cruz Mengana","mecagoento")
 
 # node1.add_notification(user1,"Tienes un evento que colisiona")
 # node1.add_notification(user1,"Tienes pendiente de aceptacion un evento")
@@ -380,11 +413,11 @@ node1.create_account(user2,"Dianelys", "Cruz Mengana","mecagoento")
 # node1.delete_notification(user1,1)
 # node1.show_notification(user1)
 
-node1.create_group(user1,'Mala Compannia', GType.Hierarchical, 'Esto no es nah')
-node1.create_group(user2,'Buena Compannia', GType.Non_hierarchical)
-node1.create_group(user1,'Media Compannia', GType.Non_hierarchical, 'Esto no es nah')
-print()
-print('SHOW GROUP JORDIPI CREATED')
+#node1.create_group(user1,'Mala Compannia', GType.Hierarchical, 'Esto no es nah')
+#node1.create_group(user2,'Buena Compannia', GType.Non_hierarchical)
+#node1.create_group(user1,'Media Compannia', GType.Non_hierarchical, 'Esto no es nah')
+#print()
+#print('SHOW GROUP JORDIPI CREATED')
 # node1.show_group_belong_to(user1)
 
 # node1.delete_group(user1,b'?\xe6\xc19\xa9m\xc7\xcd\xd8}\xa8\x95\xaf49\x92\xbf\x01\x1dF')
