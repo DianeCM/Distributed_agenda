@@ -445,34 +445,53 @@ class ChordNode:
                     send_request((sender_addr[0],sender_addr[1]),data,False,False)
                     
     def set_data(self,data):
-         key = data["key"]
-         value = data["value"]
-         self.database[key] = value
-         notify_data(f"Set {value} to {key} key","SetData")
+        key = data["key"]
+        value = data["value"]
+        self.database[key] = value
+        notify_data(f"Set {value} to {key} key","SetData")
 
     def get_data(self,data):
-         key = data["key"]
-         try: value = self.database[key] 
-         except KeyError:
-            notify_data(colored(f"Key {key} not found","Error"))
-            return None
-         notify_data(f"Obtained {value} to {key} key","GetData")
-         return value              
+        key = data["key"]
+        try: value = self.database[key] 
+        except KeyError:
+           notify_data(colored(f"Key {key} not found","Error"))
+           return None
+        notify_data(f"Obtained {value} to {key} key","GetData")
+        return value              
     
     def create_account(self,data):
         self.db.create_account(data["user_key"],data["user_name"],data["last_name"],data["password"])
 
     def get_account(self,data,response):
         user_name,last_name=self.db.get_account(data["user_key"],data["password"])
-        resp_data = {"message": str(response),'user_name':user_name,'last_name':last_name}
+        resp_data = {"message": str(response),'user_name': user_name,'last_name': last_name}
         resp_data["ip"] = data["ip"] 
         resp_data["port"] = data["port"] 
         resp_data["sender_addr"] = resp_data["sender_addr"]
         return resp_data
     
     def create_group(self,data):
-        self.db.create_account(hash_key(data["user_name"]),data["user_name"],data["last_name"],data["password"])
+        self.db.create_group(data["user_key"],data["group_name"],data["group_type"])
     
-    def create_event(self,data):
-        pass
-     
+    def get_notifications(self,data,response):
+        ids,texts=self.db.get_notifications(data["user_key"])
+        resp_data = {"message": str(response),'ids': ids,'texts': texts}
+        resp_data["ip"] = data["ip"] 
+        resp_data["port"] = data["port"] 
+        resp_data["sender_addr"] = resp_data["sender_addr"]
+        return resp_data
+
+    def delete_notification(self,data):
+        self.db.delete_notification(data["user_key"],data["id_notification"])
+
+    def create_personal_event(self,data):
+        self.db.create_personal_event(data["user_key"],data["event_name"],data["date_initial"],data["date_end"],data["visibility"])
+
+    def get_all_events(self,data,response):
+        idevents,enames,datesc,datesf,states,visibs,creators,idgroups=self.db.get_all_events(data["user_key"])
+        resp_data = {"message": str(response), "ids_event": idevents, "event_names": enames, "dates_ini": datesc, "dates_end": datesf, 
+                     "states": states, "visibilities": visibs, "creators": creators, "id_groups": idgroups  }
+        resp_data["ip"] = data["ip"] 
+        resp_data["port"] = data["port"] 
+        resp_data["sender_addr"] = resp_data["sender_addr"]
+        return resp_data
