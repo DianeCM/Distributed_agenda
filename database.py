@@ -174,19 +174,20 @@ class DBModel:
         except DoesNotExist: 
             print("Usuario no existe")
             return
-        registers = Event.select().where((Event.user == userkeyn) & ((date_ini <= Event.datec <=date_end) | (date_ini <= Event.datef <= date_end)))
+        registers = Event.select().where((Event.user == userkeyn) & (((date_ini <= Event.datec) & (Event.datec <= date_end)) | ((date_ini <= Event.datef) & (Event.datef <= date_end))))
         for register in registers:
             self.__add_notification(userkeyn, f"El evento {name} (Personal) tiene horarios coincidentes con el evento {register.ename} ({register.state})")
         event = Event.create(user=userkeyn, ename=name, datec=date_ini, datef=date_end, state=State.Personal.value, visib=privacity)
         event.save()
 
-    def get_all_events(self, userkey: int):
+    def get_all_events(self, userkey: int, privacity:bool=False):
         userkeyn = str(userkey)
         try: Account.get(user=userkeyn)
         except DoesNotExist: 
             print("Usuario no existe")
             return
-        registers = Event.select().where(Event.user == userkeyn)
+        if not privacity: registers = Event.select().where(Event.user == userkeyn)
+        else: registers = Event.select().where((Event.user == userkeyn) & (Event.visib == Privacity.Public.value))
         idevent = []
         enames = []
         datesc = []
@@ -198,8 +199,8 @@ class DBModel:
         for register in registers:
             idevent.append(register.event)
             enames.append(register.ename)
-            datesc.append(register.datec.strftime('%Y-%m-%d %H:%M:%S'))
-            datesf.append(register.datef.strftime('%Y-%m-%d %H:%M:%S'))
+            datesc.append(register.datec.strftime('%Y-%m-%d %H:%M'))
+            datesf.append(register.datef.strftime('%Y-%m-%d %H:%M'))
             states.append(register.state)
             visibs.append(register.visib)
             creators.append(register.creator)
@@ -233,6 +234,32 @@ class DBModel:
         event.state = State.Asigned
         event.save()
         self.__add_notification(userkey, f'Ha aceptado el evento {event.name}')
+
+    def get_inferior_members(self, idgroup:str, userkey:int):
+        userkeyn = str(userkey)
+        member = MemberGroup.get((MemberGroup.group==idgroup) & (MemberGroup.user==userkeyn))
+        level = member.level
+        registers = MemberGroup.select().where(MemberGroup.level > level)
+        ids = []
+        for register in registers:
+            ids.append(register.user)
+        return ids
+    
+    def create_groupal_event(self, userkey: int, name:str, date_ini:str, date_end:str, id_group:str, creatorkey:str):
+        userkeyn = str(userkey)
+        try: Account.get(user=userkeyn)
+        except DoesNotExist: 
+            print("Usuario no existe")
+            return
+        registers = Event.select().where((Event.user == userkeyn) & ((date_ini <= Event.datec <=date_end) | (date_ini <= Event.datef <= date_end)))
+        for register in registers:
+            self.__add_notification(userkeyn, f"El evento {name} ({state}) tiene horarios coincidentes con el evento {register.ename} ({register.state})")
+        if creatorkey == userkeyn: state = State.Asigned.value
+        else: state = State.Pendient.value
+        event = Event.create(user=userkeyn, ename=name, datec=date_ini, datef=date_end, state=state, visib=Privacity.Public.value, group=id_group, creator=creatorkey)
+        event.save()
+        if state == State.Pendient.value:
+            self.__add_notification(userkey, f"Tiene un nuevo evento pendiente: {name}")
 
     def add_member_account(self, userkey:int, idgroup:str, gname:str, gtype:str, idref:str):
         userkeyn = str(userkey)
@@ -406,59 +433,3 @@ class DBModel:
         notify_data("Events","GetData")  
         for reg in registers[5]:
                 print(reg.user,reg.event,reg.ename,reg.datec,reg.datef,reg.state,reg.visib,reg.creator,reg.group)  
-
-# TEST CASE
-# user1 = hash_key("jordipi")
-# user2 = hash_key("dianecm")
-# node1 = DBModel(hash_key("12345654535653555525625363565464473763563"))
-# node1.create_account(user1,"Jordan", "Pla Gonzalez","esmionotuyo")
-# node1.create_account(user2,"Dianelys", "Cruz Mengana","mecagoento")
-
-# node1.create_personal_event(user1, "Boda de Hermana", "23/12/21-08:35", "23/12/21-16:00", "Publico")
-# node1.create_personal_event(user1, "Cumple de Prima", "23/12/21-09:35", "23/12/21-18:00", "Publico")
-# ids, texts = node1.get_notifications(user1)
-# for text in texts:
-#     print(text)
-# node1.add_notification(user1,"Tienes un evento que colisiona")
-# node1.add_notification(user1,"Tienes pendiente de aceptacion un evento")
-# node1.add_notification(user2,"Tienes un evento que colisiona")
-# node1.add_notification(user2,"Tienes pendiente de aceptacion un evento")
-
-# #node1.delete_account(user1)
-# print('SHOW NOTIF JORDIPI')
-# node1.show_notification(user1)
-# print()
-# print('SHOW NOTIF DIANECM')
-# node1.show_notification(user2)
-# print()
-# print('SHOW NOTIF JORDIPI 1 AFTER DELETE NOTIF 1')
-# node1.delete_notification(user1,1)
-# node1.show_notification(user1)
-
-#node1.create_group(user1,'Mala Compannia', GType.Hierarchical, 'Esto no es nah')
-#node1.create_group(user2,'Buena Compannia', GType.Non_hierarchical)
-#node1.create_group(user1,'Media Compannia', GType.Non_hierarchical, 'Esto no es nah')
-#print()
-#print('SHOW GROUP JORDIPI CREATED')
-# node1.show_group_belong_to(user1)
-
-# node1.delete_group(user1,b'?\xe6\xc19\xa9m\xc7\xcd\xd8}\xa8\x95\xaf49\x92\xbf\x01\x1dF')
-# node1.create_group(user1,'Mala Compannia', GType.Hierarchical, 'Esto no es nah')
-# print()
-# print('SHOW GROUP JORDIPI CREATED AFTER DELETE GROUP 1')
-# node1.show_user_group_created(user1)
-
-# print()
-# print('SHOW GROUP DIANECM CREATED')
-# node1.show_user_group_created(user2)
-
-# node1.add_member_account(b'w\xd9NI\xbfi\xd9\x1f\xc4"\xf0\xa7\x91b\xe4\xd0\xfe\xff\xb0\xda',user2)
-# node1.add_member_account(b'!.\x95\xe4\x9eO\xfbv\x12\x8f\xa4\xc4\r\xc5\x98\x02\x11\xf2\xafb',user2,"Capitan",15)
-# node1.add_member_account(b'\xc9\x12\xab\xaf\xd7\x0fmB\xd3\x98l\xd9\x96\x8f\x03\x19X{h\xbc',user1)
-# print()
-# print('SHOW ALL GROUP JORDIPI BELONG')
-# node1.show_user_in_group(user1)
-
-# node1.create_event_personal(user1,'Boda de Primo','12/7/23-08:35','12/7/23-14:35')
-# node1.create_event_personal(user1,'Cumple de Hermana','17/7/23-08:35','17/7/23-14:35')
-# node1.create_event_personal(user1,'Evento Benefico','18/8/23-08:35','19/8/23-14:35')

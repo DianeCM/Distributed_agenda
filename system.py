@@ -3,6 +3,9 @@ from app import *
 
 # TASKS (MIOS NO LOS BORRES PLIS):
 # MOSTRAR ASIGNACION DE ROL Y LEVEL PARA ANNADIR MIEMBROS SI ES JERARQUICO
+# ELIMINAR EVENTOS COMPROBANDO CREADOR OR PERSONAL
+# DECLINAR EVENTOS COMPROBANDO QUE ESTAN EN PENDIENTES
+# CREAR CUENTA CON USUARIO UNICO SI NO, NOTIFCARLO
 
 class System:
     def show_home(self):
@@ -228,7 +231,7 @@ class System:
                                             break
                                         while line == "1":
                                             print("Fecha inicial:")
-                                            print("formato: <Y/M/D-HH:MM> - 24 Horas")
+                                            print("formato: <Y-M-D HH:MM> - 24 Horas")
                                             date_ini = input(line_char)
                                             if date_ini == "": continue
                                             elif date_ini == "exit": line = "exit"
