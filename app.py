@@ -23,6 +23,8 @@ class Client:
         response = data["message"]
         if not response  == str(int(GET_PROFILE)+1):
             notify_data(f"Worg data response type expected {str(int(GET_PROFILE)+1)} and got {response}","Error")
+        else:
+            return data
     
     def create_account(self, user_key, user_name, last_name, password,address=None):
         if not address: address = self.server_addr
