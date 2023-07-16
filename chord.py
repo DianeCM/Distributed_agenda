@@ -70,8 +70,8 @@ class ChordNode:
     
     @property 
     def Req_Method(self):
-        return { CREATE_PROFILE: self.create_account , CREATE_GROUP: self.create_group , CREATE_EVENT: self.create_event, REP_PROFILE: self.create_account,
-                GET_PROFILE: self.get_account}
+        return { CREATE_PROFILE: self.create_account , CREATE_GROUP: self.create_group, REP_GROUP:self.create_group, CREATE_PEVENT: self.create_personal_event, REP_PROFILE: self.create_account,
+                GET_PROFILE: self.get_account,GET_GROUPS: self.get_groups_belong_to, GET_EVENTS:self.get_all_events,REP_PEVENT: self.create_personal_event}
     
     @property
     def Serialize_Address(self):
@@ -374,7 +374,7 @@ class ChordNode:
                     else: 
                         self.Req_Method[request](data)
                         self.db.check_db()
-                if 60 <= int(request) < 70:
+                if 60 <= int(request) < 80:
                    if not self.leader == self.nodeID: self.get_nodes()
                    self.get_key(data,request)
 
@@ -464,9 +464,9 @@ class ChordNode:
 
     def get_account(self,data):
         response = str(int(data["message"])+1)
-        valid_account,user_name,last_name=self.db.get_account(data["user_key"],data["password"])
-        if valid_account:
-            resp_data = {"message": str(response),'user_name':user_name,'last_name':last_name}
+        user_name,last_name=self.db.get_account(data["user_key"],data["password"])
+        resp_data = {"message": str(response),'user_name':user_name,'last_name':last_name}
+        if  user_name and last_name:
             resp_data["ip"] = data["ip"] 
             resp_data["port"] = data["port"] 
             resp_data["sender_addr"] = data["sender_addr"]
@@ -475,37 +475,41 @@ class ChordNode:
             notify_data("This account doesn't exist","Error")
     
     def create_group(self,data):
-        self.db.create_group(data["user_key"],data["group_name"],data["group_type"])
+        g_type = data["group_type"]
+        g_type = GType.Hierarchical  if g_type == "Jerárquico" else GType.Non_hierarchical
+        self.db.create_group(data["user_key"],data["group_name"],g_type)
     
-    def get_notifications(self,data,response):
+    def get_notifications(self,data):
         ids,texts=self.db.get_notifications(data["user_key"])
-        resp_data = {"message": str(response),'ids': ids,'texts': texts}
+        resp_data = {"message": GET_NOTIF_RESP,'ids': ids,'texts': texts}
         resp_data["ip"] = data["ip"] 
         resp_data["port"] = data["port"] 
-        resp_data["sender_addr"] = resp_data["sender_addr"]
+        resp_data["sender_addr"] = data["sender_addr"]
         return resp_data
 
     def delete_notification(self,data):
         self.db.delete_notification(data["user_key"],data["id_notification"])
 
     def create_personal_event(self,data):
+        priv = data["visibility"]
+        priv = Privacity.Public  if priv == "Público" else Privacity.Private
         self.db.create_personal_event(data["user_key"],data["event_name"],data["date_initial"],data["date_end"],data["visibility"])
 
-    def get_all_events(self,data,response):
+    def get_all_events(self,data):
         idevents,enames,datesc,datesf,states,visibs,creators,idgroups=self.db.get_all_events(data["user_key"])
-        resp_data = {"message": str(response), "ids_event": idevents, "event_names": enames, "dates_ini": datesc, "dates_end": datesf, 
+        resp_data = {"message": GET_EVENTS_RESP, "ids_event": idevents, "event_names": enames, "dates_ini": datesc, "dates_end": datesf, 
                      "states": states, "visibilities": visibs, "creators": creators, "id_groups": idgroups  }
         resp_data["ip"] = data["ip"] 
         resp_data["port"] = data["port"] 
-        resp_data["sender_addr"] = resp_data["sender_addr"]
+        resp_data["sender_addr"] = data["sender_addr"]
         return resp_data
     
-    def get_groups_belong_to(self,data,response):
+    def get_groups_belong_to(self,data):
         idsgroup,gnames,gtypes,refs = self.db.get_groups_belong_to(data["user_key"])
-        resp_data = {"message": str(response), "ids_group": idsgroup, "group_names": gnames, "group_types": gtypes, "group_refs": refs  }
+        resp_data = {"message": GET_GROUPS_RESP, "ids_group": idsgroup, "group_names": gnames, "group_types": gtypes, "group_refs": refs  }
         resp_data["ip"] = data["ip"] 
         resp_data["port"] = data["port"] 
-        resp_data["sender_addr"] = resp_data["sender_addr"]
+        resp_data["sender_addr"] = data["sender_addr"]
         return resp_data 
       
     def acept_pendient_event(self,data):

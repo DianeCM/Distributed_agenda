@@ -21,8 +21,8 @@ class Client:
         msg = msg.decode('utf-8')
         data =  json.loads(msg)
         response = data["message"]
-        if not response  == str(int(GET_PROFILE)+1):
-            notify_data(f"Worg data response type expected {str(int(GET_PROFILE)+1)} and got {response}","Error")
+        if not response  == str(int(request)+1):
+            notify_data(f"Worg data response type expected {str(int(request)+1)} and got {response}","Error")
         else:
             return data
     
@@ -84,7 +84,7 @@ class Client:
         send_request(address,data,False,False)
         time.sleep(4)
         data = self.recieve_data(request) 
-        return data["ids_event"],data["event_names"],data["dates_ini"],data["datas_end"],data["states"],data["visibilities"],data["creators"],data["id_groups"]
+        return data["ids_event"],data["event_names"],data["dates_ini"],data["dates_end"],data["states"],data["visibilities"],data["creators"],data["id_groups"]
 
     def get_groups_belong_to(self,address=None):
         if not address: address = self.server_addr

@@ -143,7 +143,7 @@ class DBModel:
             return
         group = Group.create(creator=userkeyn, gname=name, gtype=gtype)
         group.save()
-        self.add_member_account(userkey, group.group, gtype, userkeyn)
+        self.add_member_account(userkey, group.group, name, gtype, userkeyn)
         self.add_member_group(group.group, userkey, "Propietario")
     
     def get_notifications(self, userkey: int):
@@ -198,8 +198,8 @@ class DBModel:
         for register in registers:
             idevent.append(register.event)
             enames.append(register.ename)
-            datesc.append(register.datec)
-            datesf.append(register.datef)
+            datesc.append(register.datec.strftime('%Y-%m-%d %H:%M:%S'))
+            datesf.append(register.datef.strftime('%Y-%m-%d %H:%M:%S'))
             states.append(register.state)
             visibs.append(register.visib)
             creators.append(register.creator)
@@ -382,16 +382,28 @@ class DBModel:
         for cls in self.classes:
             cls._meta.database = self.database
             registers.append(cls.select())
+
+        notify_data("Accounts","GetData")
         for reg in registers[0]:
                 print(reg.user,reg.name,reg.last,reg.passw)
+
+        notify_data("Notifications","GetData")
         for reg in registers[1]:
-                print(reg.user,reg.notif,reg.text)       
+                print(reg.user,reg.notif,reg.text)  
+
+        notify_data("Groups","GetData")   
         for reg in registers[2]:
-                print(reg.creator,reg.group,reg.gname,reg.gtype,reg.descr)       
+                print(reg.creator,reg.group,reg.gname,reg.gtype)
+
+        notify_data("Member Account","GetData")      
         for reg in registers[3]:
-                print(reg.user,reg.group,reg.ref)   
+                print(reg.user,reg.group,reg.ref)  
+
+        notify_data("MemberGroup","GetData")    
         for reg in registers[4]:
                 print(reg.group,reg.user,reg.role,reg.level) 
+
+        notify_data("Events","GetData")  
         for reg in registers[5]:
                 print(reg.user,reg.event,reg.ename,reg.datec,reg.datef,reg.state,reg.visib,reg.creator,reg.group)  
 

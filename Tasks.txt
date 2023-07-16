@@ -1,18 +1,19 @@
 Que base de datos usar? (check)
 como distribuir la base de datos en la red chord (check)
-Estructura de los mensajes que se envian
+Estructura de los mensajes que se envian (check)
+metodo para cuando falle el lider (check)
+Q hacer cuando ninguno de los que respondio era el lider (check)
+Look_up response se debe enviar al nodo que hizo el request o directamente al cliente ?? (check)
+Problema con la consistencia al llegar un nodo nuevo (check)
+no quedarme con la info del lider hasta q no me  notifique q es el lider (check)
+actualizacion de nodeSet (check)
 
-metodo para cuando falle el lider 
 caso en que falla el sucesor
 probar que se inicien todos los servidores a la vez
-Q hacer cuando ninguno de los que respondio era el lider
 Establecer puertos por defecto en la clase address 
 union de un nodo cuando el lider ha terminado de descubir toda la red 
 comenzar a correr el hilo de discover_request desde que se inicia el nodo 
-Look_up response se debe enviar al nodo que hizo el request o directamente al cliente ??
 verificar si el sucesor es el que tiene la llave 
 Si un lider le escribe a otro lider
-Problema con la consistencia al llegar un nodo nuevo 
 Borrar datos los datos del anterior predecesor cuando se tiene un nuevo predeccesor
-no quedarme con la info del lider hasta q no me  notifique q es el lider
-actualizacion de nodeSet
+Agregar mas bytes a la hora de pasar los archivos
