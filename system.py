@@ -1,6 +1,9 @@
 import os
 from app import *
 
+# TASKS (MIOS NO LOS BORRES PLIS):
+# MOSTRAR ASIGNACION DE ROL Y LEVEL PARA ANNADIR MIEMBROS SI ES JERARQUICO
+
 class System:
     def show_home(self):
         os.system('cls')
@@ -30,7 +33,7 @@ class System:
         print("3. Notificaciones")
         print("4. Eventos")
         print("5. Grupos")
-        print("6. Borrar Cuenta")
+        #print("6. Borrar Cuenta")
         print("")
         print("<home>: volver a la vista principal")
         print("<exit>: cerrar la aplicación")
@@ -255,8 +258,8 @@ class System:
                                             elif privacity == "exit": line = "exit"
                                             elif privacity == "home": line = "home"
                                             elif privacity == "back": line = "back"
-                                            elif privacity == "1": privacity = Privacity.Private
-                                            elif privacity == "2": privacity = Privacity.Public
+                                            elif privacity == "1": privacity = Privacity.Private.value
+                                            elif privacity == "2": privacity = Privacity.Public.value
                                             else: continue
                                             break
                                         if line != "1": break
@@ -302,23 +305,22 @@ class System:
                                         if line == "home": line = "home"
                                         if line == "back": line = "back"
                                         break
-                                if line == "6": 
-                                    while True:
-                                        os.system('cls')
-                                        print("<back>: regresar al perfil")
-                                        print("<home>: volver a la vista principal")
-                                        print("<exit>: cerrar la aplicación")
-                                        print("")
-                                        print("¿Está seguro(a) de querer borrar su cuenta? (Y/N)")
-                                        line = input(line_char)
-                                        if line == "exit" or line == "home" or line == "back": break
-                                        if line != "Y" and line != "N": continue
-                                        if line == "Y":
-                                            user.delete_account()
-                                            line = "home"
-                                            break
-                                        if line == "N": break
-
+                                # if line == "6": 
+                                #     while True:
+                                #         os.system('cls')
+                                #         print("<back>: regresar al perfil")
+                                #         print("<home>: volver a la vista principal")
+                                #         print("<exit>: cerrar la aplicación")
+                                #         print("")
+                                #         print("¿Está seguro(a) de querer borrar su cuenta? (Y/N)")
+                                #         line = input(line_char)
+                                #         if line == "exit" or line == "home" or line == "back": break
+                                #         if line != "Y" and line != "N": continue
+                                #         if line == "Y":
+                                #             user.delete_account()
+                                #             line = "home"
+                                #             break
+                                #         if line == "N": break
                                 if line == "exit" or line == "home": break
                         else:
                             print("Su nombre de usuario o contraseña son incorrectas. Inténtelo de nuevo")
