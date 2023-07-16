@@ -71,7 +71,8 @@ class ChordNode:
     @property 
     def Req_Method(self):
         return { CREATE_PROFILE: self.create_account , CREATE_GROUP: self.create_group, REP_GROUP:self.create_group, CREATE_PEVENT: self.create_personal_event, REP_PROFILE: self.create_account,
-                GET_PROFILE: self.get_account,GET_GROUPS: self.get_groups_belong_to, GET_EVENTS:self.get_all_events,REP_PEVENT: self.create_personal_event}
+                GET_PROFILE: self.get_account,GET_GROUPS: self.get_groups_belong_to, GET_EVENTS:self.get_all_events,REP_PEVENT: self.create_personal_event, GET_NOTIFICATIONS: self.get_notifications,
+                DELETE_NOTIFICATION:self.delete_notification}
     
     @property
     def Serialize_Address(self):

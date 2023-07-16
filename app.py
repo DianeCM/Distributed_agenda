@@ -35,15 +35,9 @@ class Client:
         time.sleep(4)
 
     def get_account(self, user_key, password,address=None):
-        if not address: address = self.server_addr
+        
         self.user_key = hash_key(user_key)
-        request = GET_PROFILE
-        data = {"message": request, "ip": "127.0.0.1", "port": "5557", "user_key": self.user_key, "password": password, "sender_addr": self.addr  }
-        print(f"Sending GET_PROFILE request to {str(address)}")
-        send_request(address,data,False,False)
-        time.sleep(4)
-        data = self.recieve_data(request)       
-        return data['user_name'], data['last_name']
+        return self.check_account(self.user_key,address,password=password)
     
     def create_group(self, group_name, group_type,address=None):
         if not address: address = self.server_addr
@@ -103,22 +97,41 @@ class Client:
         send_request(address,data,False,False)
         time.sleep(4)
 
-
-
-
-    
+    def check_account(self,user_key,address,password = None):
+        if not address: address = self.server_addr
+        request = GET_PROFILE
+        data = {"message": request, "ip": "127.0.0.1", "port": "5557", "user_key": user_key, "password": password, "sender_addr": self.addr  }
+        print(f"Sending GET_PROFILE request to {str(address)}")
+        send_request(address,data,False,False)
+        time.sleep(4)
+        data = self.recieve_data(request)       
+        return data['user_name'], data['last_name']
 
 
     # PENDIENTES A ARREGLAR (NO ESPERES QUE SIRVAN AUN) ********************************************************************
     # ESTO ES UN DILEMON
     def delete_event(self, id_event,address=None):
-        # SI ES PERSONAL SE ELIMINA Y NO HAY PROBLEMA, PERO SI ES CREADOR DE EVENTO GRUPAL HAY UN PROBLEMON GORDO
-        # IR AL GRUPO EN DONDE FUE CREADO
-        # SI ES JERARQUICO, HAY QUE ELIMINARLO PARA TODOS LOS JERARQUICAMENTE INFERIOR
-        # SI NO ES JERARQUICO, HAY QUE ELIMINARLO PARA TODOS LOS MIEMBROS DEL GRUPO
-        # LO QUE IMPLICA PREGUNTAR POR TODOS ESO ID EN LA RED CHORD
         if not address: address = self.server_addr
-        data = {"message":DELETE_EVENT, "ip":"127.0.0.1", "port":"5557", "user_key":self.user_key, "id_evet":id_event  }
+        _,_,_,_,_,_,id_creator,id_group = self.get_event(self.user_key,id_event,address)
+        # SI ES PERSONAL SE ELIMINA Y NO HAY PROBLEMA, 
+        if id_group == None: self.delete_user_event(id_event,self.user_key,address)
+        # PERO SI ES CREADOR DE EVENTO GRUPAL HAY UN PROBLEMON GORDO
+        else:
+        # IR AL GRUPO EN DONDE FUE CREADO (Llamar el metdo para saber si es jerarquico)
+
+        # SI ES JERARQUICO, HAY QUE ELIMINARLO PARA TODOS LOS JERARQUICAMENTE INFERIOR
+            if non_hierch:
+              members = self.get_inferior_members(id_creator,id_group,address)
+        # SI NO ES JERARQUICO, HAY QUE ELIMINARLO PARA TODOS LOS MIEMBROS DEL GRUPO
+            else:
+                pass
+        # LO QUE IMPLICA PREGUNTAR POR TODOS ESO ID EN LA RED CHORD
+            for member in members:
+                id_user = member[0]
+                self.delete_user_event(id_event,id_user,address)
+
+    def delete_user_event(self,id_event,user_key,address):
+        data = {"message":DELETE_EVENT, "ip":"127.0.0.1", "port":"5557", "user_key":user_key, "id_evet":id_event  }
         print(f"Sending DELETE_EVENT request to {str(address)}")
         send_request(address,data,False,False)
         time.sleep(4)
@@ -142,10 +155,12 @@ class Client:
         pass
 
     def add_member_to_group(self, id_group, id_user,address=None):
-        # PONERLO EN EL MEMBER_GROUP DEL CREADOR (QUE ES EL USUARIO) LO QUE NO ME KEDA CLARO COMO COMPROBAR QUE EL ID DE MIEMBRO EXISTE
-        # PONERLO EN LA MEMBER_ACCOUNT DEL MIEMBRO
         if not address: address = self.server_addr
-        request = ADD_MEMBER
+        user_name, last_name = self.check_account(id_user,address)
+        if  user_name:
+            # PONERLO EN EL MEMBER_GROUP DEL CREADOR (QUE ES EL USUARIO) LO QUE NO ME KEDA CLARO COMO COMPROBAR QUE EL ID DE MIEMBRO EXISTE
+            # PONERLO EN LA MEMBER_ACCOUNT DEL MIEMBRO
+            request = ADD_MEMBER
         pass
 
     def get_inferior_members(self, id_creator, id_group,address=None):
