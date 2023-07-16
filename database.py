@@ -232,6 +232,7 @@ class DBModel:
             return
         event.state = State.Asigned
         event.save()
+        self.__add_notification(userkey, f'Ha aceptado el evento {event.name}')
 
     def add_member_account(self, userkey:int, idgroup:str, gname:str, gtype:str, idref:str):
         userkeyn = str(userkey)
