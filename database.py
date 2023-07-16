@@ -129,7 +129,7 @@ class DBModel:
 
     def get_account(self, userkey: int, password: str):
         userkeyn = str(userkey)
-        try: user = Account.get((Account.user == userkeyn) & (Account.passw == password))
+        try: user = Account.get((Account.user == userkeyn) & (Account.passw == password)) if password else Account.get((Account.user == userkeyn)) 
         except DoesNotExist: 
             print("Usuario no existe")
             return None, None
