@@ -376,7 +376,7 @@ class ChordNode:
                         self.db.check_db()
                 if 60 <= int(request) < 70:
                    if not self.leader == self.nodeID: self.get_nodes()
-                   self.get_key(data,request,addr)
+                   self.get_key(data,request)
 
             #elif request == LOOKUP_REQ: 
             #   if not self.leader == self.nodeID: self.get_nodes()                  # A lookup request #-
@@ -431,7 +431,7 @@ class ChordNode:
                         send_request((self.node_address[next_node].ip,int(self.node_address[next_node].ports[0])),data,False,False)  
 
     def get_key(self,data,request):            
-                key = data["key"]
+                key = data["user_key"]
                 sender_addr = data["sender_addr"]
                 nextID = self.localSuccNode(key)          # look up next node #-
                 if not nextID == self.nodeID :
@@ -439,8 +439,8 @@ class ChordNode:
                     send_request((self.node_address[nextID].ip,int(self.node_address[nextID].ports[0])),data,False,False)
                     notify_data(f"Sending {request} to {nextID} node : {str(self.node_address[nextID])} ","GetData")
                 else:
-                    self.Req_Method[request](data)
-                    data = self.get_data(data,int(request)+1)
+                    data = self.Req_Method[request](data)
+                    #data = self.get_data(data,int(request)+1)
                     notify_data(f"Sending  {int(request)+1} to {sender_addr}","GetData")
                     send_request((sender_addr[0],sender_addr[1]),data,False,False)
                     
@@ -462,13 +462,17 @@ class ChordNode:
     def create_account(self,data):
         self.db.create_account(data["user_key"],data["user_name"],data["last_name"],data["password"])
 
-    def get_account(self,data,response):
-        user_name,last_name=self.db.get_account(data["user_key"],data["password"])
-        resp_data = {"message": str(response),'user_name': user_name,'last_name': last_name}
-        resp_data["ip"] = data["ip"] 
-        resp_data["port"] = data["port"] 
-        resp_data["sender_addr"] = resp_data["sender_addr"]
-        return resp_data
+    def get_account(self,data):
+        response = str(int(data["message"])+1)
+        valid_account,user_name,last_name=self.db.get_account(data["user_key"],data["password"])
+        if valid_account:
+            resp_data = {"message": str(response),'user_name':user_name,'last_name':last_name}
+            resp_data["ip"] = data["ip"] 
+            resp_data["port"] = data["port"] 
+            resp_data["sender_addr"] = data["sender_addr"]
+            return resp_data
+        else:
+            notify_data("This account doesn't exist","Error")
     
     def create_group(self,data):
         self.db.create_group(data["user_key"],data["group_name"],data["group_type"])
