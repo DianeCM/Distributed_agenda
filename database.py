@@ -205,6 +205,34 @@ class DBModel:
             creators.append(register.creator)
             idgroups.append(register.group)
         return idevent, enames, datesc, datesf, states, visibs, creators, idgroups
+    
+    def get_groups_belong_to(self, userkey: int):
+        userkeyn = str(userkey)
+        try: Account.get(user=userkeyn)
+        except DoesNotExist: 
+            print("Usuario no existe")
+            return
+        registers = MemberAccount.select().where(MemberAccount.user == userkeyn)
+        idsgroup = []
+        gnames = []
+        gtypes = []
+        refs = []
+        for register in registers:
+            idsgroup.append(register.group)
+            gnames.append(register.gname)
+            gtypes.append(register.gtype)
+            refs.append(register.ref)
+        return idsgroup,gnames,gtypes,refs
+    
+    def acept_pendient_event(self, userkey: int, idevent: str):
+        userkeyn = str(userkey)
+        try: event = Event.get((Event.user==userkeyn) & (Event.event==idevent))
+        except DoesNotExist: 
+            print("Evento no existe")
+            return
+        event.state = State.Asigned
+        event.save()
+        self.__add_notification(userkey, f'Ha aceptado el evento {event.name}')
 
     def add_member_account(self, userkey:int, idgroup:str, gname:str, gtype:str, idref:str):
         userkeyn = str(userkey)
@@ -252,39 +280,11 @@ class DBModel:
     
     
     
-    # PENDIENTE A CORREGIR *************************************************************************************************
-    # def delete_account(self, userkey: int):
-    #     userkey = userkey.to_bytes(20, byteorder='big')
-    #     Account.delete().where(Account.user==userkey).execute()
-    #     Notification.delete().where(Notification.user==userkey).execute()
-    #     Event.delete().where(Event.user==userkey).execute()
-    #     Group.delete().where(Group.creator==userkey).execute()
-    #     MemberAccount.delete().where(MemberAccount.user==userkey).execute()
-    #     MemberGroup.delete().where(MemberGroup.user==userkey).execute()
-    #     id_notif = []
-    #     for ids in Notification.select(Group.notif).where(Group.creator == userkey).tuples():
-    #         id_notif.append(ids[0])
-    #         notif = Notification.get(notif=ids[0])
-    #         notif.delete_instance()
-    #     Event.delete().where(Event.user==userkey).execute()
-    #     # BORRAR LOS GRUPOS QUE CREO Y POR CADA UNO DE ESTOS GRUPOs (A CADA UNO DE SUS MIEMBROS ELIMINAR PERTENENCIA GRUPO)
-    #     # ELIMINAR DE LOS GRUPOS QUE LO TIENEN COMO MIEMBRO
-
-    def show_group_belong_to(self, userkey: int):
-        userkey = userkey.to_bytes(20, byteorder='big')
-        registers = MemberAccount.select().where(MemberAccount.user == userkey)
-        for register in registers:
-            print(register.group)
-    
+    # PENDIENTE A CORREGIR ************************************************************************************************
     def show_user_in_group(self, group: bytes):
         registers = MemberGroup.select().where(MemberGroup.group == group)
         for register in registers:
             print(register.user, register.role)
-
-    # def delete_group(self, userkey: int, id_group: bytes):
-    #     userkey = userkey.to_bytes(20, byteorder='big')
-    #     group = Group.get((Group.group == id_group) & (Group.creator == userkey))
-    #     if group: group.delete_instance(recursive=True)
 
     def create_event_grupal(self, userkey: int, name:str, date_ini:str, date_end:str, privacity:Privacity=Privacity.Public, idgroup:bytes=None):
         userkey = userkey.to_bytes(20, byteorder='big')
@@ -300,12 +300,6 @@ class DBModel:
         for register in registers:
             print(register.ename, register.date_ini, register.date_end)
 
-    def acept_event(self, idevent:bytes):
-        Event._meta.database = self.database
-        event = Event.get(idevent=idevent)
-        event.state = State.Asigned
-        event.save()
-
     def decline_event(self, idevent:bytes):
         # LLAMAR A TO EL MUNDOS
         pass
@@ -314,38 +308,10 @@ class DBModel:
         Event._meta.database = self.database
         registers = Event.get((Event.idevent == idevent)&(Event.state == State.Personal))
         if registers: registers.delete_instance(recursive=True)
-        
 
-    def colision_queries():  # APROBADO
-        conn = sql3.connect('agenda.db')
-        cursor = conn.cursor()
-        cursor.execute("SELECT * FROM person_grouped JOIN grouped")
-        rows = cursor.fetchall()
-        for row in rows:
-            print(row)
-        # Cerrar la conexion a la base de datos
-        conn.close()
 
-    def group_per_user_queries():  # APROBADO
-        conn = sql3.connect('agenda.db')
-        cursor = conn.cursor()
-        cursor.execute("SELECT * FROM person_grouped JOIN grouped")
-        rows = cursor.fetchall()
-        for row in rows:
-            print(row)
-        # Cerrar la conexion a la base de datos
-        conn.close()
 
-    def group_rank():  # APROBADO
-        conn = sql3.connect('agenda.db')
-        cursor = conn.cursor()
-        cursor.execute("SELECT * FROM person_grouped JOIN grouped")
-        rows = cursor.fetchall()
-        for row in rows:
-            print(row)
-        # Cerrar la conexion a la base de datos
-        conn.close()
-
+    # PARA REPLICACION DE CHORD NO TOCAR
     def filter_function(self,condition,cls):
             def cond(row):
                 key = row.user if not cls == Group else row.creator

@@ -499,3 +499,14 @@ class ChordNode:
         resp_data["port"] = data["port"] 
         resp_data["sender_addr"] = resp_data["sender_addr"]
         return resp_data
+    
+    def get_groups_belong_to(self,data,response):
+        idsgroup,gnames,gtypes,refs = self.db.get_groups_belong_to(data["user_key"])
+        resp_data = {"message": str(response), "ids_group": idsgroup, "group_names": gnames, "group_types": gtypes, "group_refs": refs  }
+        resp_data["ip"] = data["ip"] 
+        resp_data["port"] = data["port"] 
+        resp_data["sender_addr"] = resp_data["sender_addr"]
+        return resp_data 
+      
+    def acept_pendient_event(self,data):
+        self.db.acept_pendient_event(data["user_key"],data["id_event"])

@@ -86,55 +86,77 @@ class Client:
         data = self.recieve_data(request) 
         return data["ids_event"],data["event_names"],data["dates_ini"],data["datas_end"],data["states"],data["visibilities"],data["creators"],data["id_groups"]
 
-
+    def get_groups_belong_to(self,address=None):
+        if not address: address = self.server_addr
+        request = GET_GROUPS
+        data = {"message": request, "ip": "127.0.0.1", "port": "5557", "user_key": self.user_key, "sender_addr": self.addr  }
+        print(f"Sending GET_GROUPS request to {str(address)}")
+        send_request(address,data,False,False)
+        time.sleep(4)
+        data = self.recieve_data(request) 
+        return data["ids_group"],data["group_names"],data["group_types"],data["group_refs"]
     
+    def acept_pendient_event(self, id_event,address=None):
+        if not address: address = self.server_addr
+        data = {"message": ACEPT_EVENT, "ip": "127.0.0.1", "port": "5557", "user_key": self.user_key, "id_event": id_event  }
+        print(f"Sending ACEPT_EVENT request to {str(address)}")
+        send_request(address,data,False,False)
+        time.sleep(4)
+
+
+
+
     
 
 
     # PENDIENTES A ARREGLAR (NO ESPERES QUE SIRVAN AUN) ********************************************************************
     # ESTO ES UN DILEMON
     def delete_event(self, id_event,address=None):
-        data = {"message":DELETE_EVENT, "ip":"127.0.0.1", "port":"5557", "user_key":self.user_key, "id_evet":id_event  }
+        # SI ES PERSONAL SE ELIMINA Y NO HAY PROBLEMA, PERO SI ES CREADOR DE EVENTO GRUPAL HAY UN PROBLEMON GORDO
+        # IR AL GRUPO EN DONDE FUE CREADO
+        # SI ES JERARQUICO, HAY QUE ELIMINARLO PARA TODOS LOS JERARQUICAMENTE INFERIOR
+        # SI NO ES JERARQUICO, HAY QUE ELIMINARLO PARA TODOS LOS MIEMBROS DEL GRUPO
+        # LO QUE IMPLICA PREGUNTAR POR TODOS ESO ID EN LA RED CHORD
         if not address: address = self.server_addr
+        data = {"message":DELETE_EVENT, "ip":"127.0.0.1", "port":"5557", "user_key":self.user_key, "id_evet":id_event  }
         print(f"Sending DELETE_EVENT request to {str(address)}")
         send_request(address,data,False,False)
         time.sleep(4)
 
-    def acept_pendient_event(self, id_event,address=None):
-        data = {"message":ACEPT_EVENT, "ip":"127.0.0.1", "port":"5557", "user_key":self.user_key, "id_evet":id_event  }
-        if not address: address = self.server_addr
-        print(f"Sending ACEPT_EVENT request to {str(address)}")
-        send_request(address,data,False,False)
-        time.sleep(4)
-
     def decline_pendient_event(self, id_event,address=None):
-        data = {"message":DECLINE_EVENT, "ip":"127.0.0.1", "port":"5557", "user_key":self.user_key, "id_evet":id_event  }
+        # AQUI EL SISTEMA SOLO VA A PERMITIR LLEGAR SI ES UN EVENTO DE GRUPO NO JERARQUICO
+        # SE ELIMINA DE ÉL Y SE VA AL GRUPO DONDE FUE CREADO
+        # PARA TODOS LOS MIEMBROS DEL GRUPO SE ELIMINA EL EVENTO (NOTIFICAR QUE EL EVENTO FUE RECHAZADO)
         if not address: address = self.server_addr
-        print(f"Sending DECLINE_EVENT request to {str(address)}")
-        send_request(address,data,False,False)
-        time.sleep(4)
-
-    def get_groups_belong_to(self,address=None):
-        # DEVOLVER LA LISTA DE GRUPOS A LOS QUE PERTENECE (ID, NOMBRE, TIPO)
+        request = DECLINE_EVENT
         pass
 
-    def create_groupal_event(self, id_group, event_name, date_initial, date_end, privacity,address=None):
-        data = {"message":CREATE_GEVENT, "ip":"127.0.0.1", "port":"5557", "user_key":self.user_key, "event_name":event_name,
-                "date_initial":date_initial , "date_end":date_end, "visibility":privacity, "creator":self.user_key, "id_group":id_group  }
+    def create_groupal_event(self, address=None):
+        # SE CREA EL EVENTO EN EL USUARIO REFERENCIANDO AL GRUPO Y A EL COMO CREADO
+        # IR AL GRUPO EN DONDE FUE CREADO
+        # SI ES JERARQUICO, HAY QUE ASIGNARLO PARA TODOS LOS JERARQUICAMENTE INFERIOR
+        # SI NO ES JERARQUICO, HAY QUE ASIGNARLO PARA TODOS LOS MIEMBROS DEL GRUPO EN PENDIENTE
+        # LO QUE IMPLICA PREGUNTAR POR TODOS ESO ID EN LA RED CHORD
         if not address: address = self.server_addr
-        print(f"Sending CREATE_PEVENT request to {str(address)}")
-        send_request(address,data,False,False)
-        time.sleep(4)
+        request = CREATE_GEVENT
+        pass
 
     def add_member_to_group(self, id_group, id_user,address=None):
-        # AQUI HAY QUE PONERLO EN EL GRUPO DEL CREADOR (QUE ES EL USUARIO)
-        # AQUI HAY QUE PONERLO EN LA DATABASE DEL MIEMBRO QUE PERTENECE A ESTE GRUPO
+        # PONERLO EN EL MEMBER_GROUP DEL CREADOR (QUE ES EL USUARIO) LO QUE NO ME KEDA CLARO COMO COMPROBAR QUE EL ID DE MIEMBRO EXISTE
+        # PONERLO EN LA MEMBER_ACCOUNT DEL MIEMBRO
+        if not address: address = self.server_addr
+        request = ADD_MEMBER
         pass
 
     def get_inferior_members(self, id_creator, id_group,address=None):
         # IR A LA BASE DE DATOS DEL CREADOR DEL GRUPO
         # EN EL GRUPO SOLICITAR MIEMBROS INFERIORES AL ROL DEL USUARIO
+        if not address: address = self.server_addr
+        request = GET_HIERARCHICAL_MEMBERS
         pass
+        
     def get_member_events(self, id_member,address=None):
         # SOLICITAR EVENTOS DEL MIEMBRO RESPETANDO SU PRIVACIDAD
+        if not address: address = self.server_addr
+        request = GET_EVENTS_MEMBER
         pass
