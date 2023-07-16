@@ -94,7 +94,7 @@ class Event(Model):
     datef = DateTimeField(null=False)
     state = CharField(max_length=9, null=False)
     visib = CharField(max_length=9, null=False)
-    creator = CharField(max_length=70,null=False)
+    creator = CharField(max_length=70,null=True)
     group = CharField(max_length=70,null=True)
     
     class Meta:
@@ -130,54 +130,145 @@ class DBModel:
     def get_account(self, userkey: int, password: str):
         userkeyn = str(userkey)
         try: user = Account.get((Account.user == userkeyn) & (Account.passw == password))
-        except DoesNotExist: return False # DATA => MESS=FALSE, NAME=NONE, LASTNAME=NONE
-        return True, user.name, user.last
-
-    # PENDIENTE A CORREGIR
-    def delete_account(self, userkey: int):
-        userkey = userkey.to_bytes(20, byteorder='big')
-        Account.delete().where(Account.user==userkey).execute()
-        Notification.delete().where(Notification.user==userkey).execute()
-        Event.delete().where(Event.user==userkey).execute()
-        Group.delete().where(Group.creator==userkey).execute()
-        MemberAccount.delete().where(MemberAccount.user==userkey).execute()
-        MemberGroup.delete().where(MemberGroup.user==userkey).execute()
-        id_notif = []
-        for ids in Notification.select(Group.notif).where(Group.creator == userkey).tuples():
-            id_notif.append(ids[0])
-            notif = Notification.get(notif=ids[0])
-            notif.delete_instance()
-        Event.delete().where(Event.user==userkey).execute()
-        # BORRAR LOS GRUPOS QUE CREO Y POR CADA UNO DE ESTOS GRUPOs (A CADA UNO DE SUS MIEMBROS ELIMINAR PERTENENCIA GRUPO)
-        # ELIMINAR DE LOS GRUPOS QUE LO TIENEN COMO MIEMBRO
-
-    def add_notification(self, userkey: int, text: str, notif: int = None):
+        except DoesNotExist: 
+            print("Usuario no existe")
+            return None, None
+        return user.name, user.last
+    
+    def create_group(self, userkey:int, name: str, gtype: str): 
         userkeyn = str(userkey)
         try: Account.get(user=userkeyn)
-        except DoesNotExist: return
-        notif = Notification.create(user=userkeyn, notif=notif, text=text)
-        notif.save()
-
-    def show_notification(self, userkey: int):
+        except DoesNotExist: 
+            print("Usuario no existe")
+            return
+        group = Group.create(creator=userkeyn, gname=name, gtype=gtype)
+        group.save()
+        self.add_member_account(userkey, group.group, gtype, userkeyn)
+        self.add_member_group(group.group, userkey, "Propietario")
+    
+    def get_notifications(self, userkey: int):
         userkeyn = str(userkey)
+        try: Account.get(user=userkeyn)
+        except DoesNotExist: 
+            print("Usuario no existe")
+            return
         registers = Notification.select().where(Notification.user == userkeyn).order_by(Notification.notif.desc())
+        ids_notif = []
+        texts = []
         for register in registers:
-            print(register.notif, register.text)
-
-    def delete_notification(self, userkey: int, notif: int):
+            ids_notif.append(register.notif)
+            texts.append(register.text)
+        return ids_notif, texts
+    
+    def delete_notification(self, userkey: int, notif: str):
         userkeyn = str(userkey)
         try: notif = Notification.get((Notification.user == userkeyn) & (Notification.notif == notif))
-        except DoesNotExist: return
+        except DoesNotExist: 
+            print("Notificación no existe")
+            return
         notif.delete_instance(recursive=True)
 
-    def create_group(self, userkey:int, name: str, gtype: GType, description: str = "", group: str = None):
+    def create_personal_event(self, userkey: int, name:str, date_ini:str, date_end:str, privacity:str):
+        userkeyn = str(userkey)
+        try: Account.get(user=userkeyn)
+        except DoesNotExist: 
+            print("Usuario no existe")
+            return
+        registers = Event.select().where((Event.user == userkeyn) & ((date_ini <= Event.datec <=date_end) | (date_ini <= Event.datef <= date_end)))
+        for register in registers:
+            self.__add_notification(userkeyn, f"El evento {name} (Personal) tiene horarios coincidentes con el evento {register.ename} ({register.state})")
+        event = Event.create(user=userkeyn, ename=name, datec=date_ini, datef=date_end, state=State.Personal.value, visib=privacity)
+        event.save()
+
+    def get_all_events(self, userkey: int):
+        userkeyn = str(userkey)
+        try: Account.get(user=userkeyn)
+        except DoesNotExist: 
+            print("Usuario no existe")
+            return
+        registers = Event.select().where(Event.user == userkeyn)
+        idevent = []
+        enames = []
+        datesc = []
+        datesf = []
+        states = []
+        visibs = []
+        creators = []
+        idgroups = []
+        for register in registers:
+            idevent.append(register.event)
+            enames.append(register.ename)
+            datesc.append(register.datec)
+            datesf.append(register.datef)
+            states.append(register.state)
+            visibs.append(register.visib)
+            creators.append(register.creator)
+            idgroups.append(register.group)
+        return idevent, enames, datesc, datesf, states, visibs, creators, idgroups
+
+    def add_member_account(self, userkey:int, idgroup:str, gname:str, gtype:str, idref:str):
+        userkeyn = str(userkey)
+        try: Account.get(user=userkeyn)
+        except DoesNotExist:
+            print("Usuario no existe")
+            return
+        member = MemberAccount.create(user=userkeyn, group=idgroup, gname=gname, gtype=gtype, ref=idref)
+        member.save()
+
+    def add_member_group(self, idgroup: str, userkey: int, role: str='Miembro', level: int=None):
+        userkeyn = str(userkey)
+        try: Group.get(group=idgroup)
+        except DoesNotExist: return
+        role_level = None
+        if role == 'Propietario':
+            try: role_level = MemberGroup.get((MemberGroup.group==idgroup)&(MemberGroup.role==role))
+            except:
+                asign = MemberGroup.create(group=idgroup, user=userkeyn, role=role, level=0)
+                asign.save()
+            if role_level is not None: print("Solo puede haber un propietario")
+        elif role == 'Miembro':
+            asign = MemberGroup.create(group=idgroup, user=userkeyn, role=role, level=1000)
+            asign.save()
+        else:
+            try: role_level = MemberGroup.get((MemberGroup.group==idgroup)&(MemberGroup.role==role))
+            except:
+                if level is not None and (0 < level < 1000):
+                    asign = MemberGroup.create(group=idgroup, user=userkeyn, role=role, level=level)
+                    asign.save()
+                else: print("Debe asignar un valor de nivel al rol mayor que 0 y menor que 1000")
+                if role_level:
+                    asign = MemberGroup.create(group=idgroup, iduser=userkeyn, role=role, level=role_level.level)
+                    asign.save()
+
+    def __add_notification(self, userkey: int, text: str):  
         userkeyn = str(userkey)
         try: Account.get(user=userkeyn)
         except DoesNotExist: return
-        group = Group.create(creator=userkeyn, group=group, gname=name, gtype=gtype.value, description=description)
-        group.save()
-        self.add_member_account(userkey, group.group, userkeyn)
-        self.add_member_group(group.group, userkey, "Propietario")
+        notif = Notification.create(user=userkeyn, text=text)
+        notif.save()
+
+    
+
+    
+    
+    
+    # PENDIENTE A CORREGIR *************************************************************************************************
+    # def delete_account(self, userkey: int):
+    #     userkey = userkey.to_bytes(20, byteorder='big')
+    #     Account.delete().where(Account.user==userkey).execute()
+    #     Notification.delete().where(Notification.user==userkey).execute()
+    #     Event.delete().where(Event.user==userkey).execute()
+    #     Group.delete().where(Group.creator==userkey).execute()
+    #     MemberAccount.delete().where(MemberAccount.user==userkey).execute()
+    #     MemberGroup.delete().where(MemberGroup.user==userkey).execute()
+    #     id_notif = []
+    #     for ids in Notification.select(Group.notif).where(Group.creator == userkey).tuples():
+    #         id_notif.append(ids[0])
+    #         notif = Notification.get(notif=ids[0])
+    #         notif.delete_instance()
+    #     Event.delete().where(Event.user==userkey).execute()
+    #     # BORRAR LOS GRUPOS QUE CREO Y POR CADA UNO DE ESTOS GRUPOs (A CADA UNO DE SUS MIEMBROS ELIMINAR PERTENENCIA GRUPO)
+    #     # ELIMINAR DE LOS GRUPOS QUE LO TIENEN COMO MIEMBRO
 
     def show_group_belong_to(self, userkey: int):
         userkey = userkey.to_bytes(20, byteorder='big')
@@ -190,54 +281,10 @@ class DBModel:
         for register in registers:
             print(register.user, register.role)
 
-    def delete_group(self, userkey: int, id_group: bytes):
-        userkey = userkey.to_bytes(20, byteorder='big')
-        group = Group.get((Group.group == id_group) & (Group.creator == userkey))
-        if group: group.delete_instance(recursive=True)
-        
-    def add_member_account(self, userkey:int, idgroup:bytes, idref:bytes):
-        userkey = userkey.to_bytes(20, byteorder='big')
-        account = Account.get(user=userkey)
-        member = MemberAccount.create(user=account, group=idgroup, ref=idref)
-        member.save()
-    
-    def add_member_group(self, idgroup:bytes, userkey: int, role='Miembro', level:int=0):
-        group = Group.get(group=idgroup)
-        userkey = userkey.to_bytes(20, byteorder='big')
-        if role == 'Propietario':
-            role_level = None
-            try:
-                role_level = MemberGroup.get((MemberGroup.group==group)&(MemberGroup.role==role))
-            except:
-                asign = MemberGroup.create(group=group, user=userkey, role=role, level=0)
-                asign.save()
-            if role_level is not None:
-                print("Solo puede haber un propietario")
-        elif role == 'Miembro':
-            asign = MemberGroup.create(group=group, iduser=userkey, role=role, level=1000)
-            asign.save()
-        else:
-            if group.gtype == GType.Hierarchical.value:
-                role_level = None
-                try:
-                    role_level = MemberGroup.get((MemberGroup.group==group)&(MemberGroup.role==role))
-                except:
-                    if level is not None and (0 < level < 1000):
-                        asign = MemberGroup.create(group=group, iduser=userkey, role=role, level=level)
-                        asign.save()
-                    else:
-                        print("Debe asignar un valor de nivel al rol")
-                if role_level:
-                    asign = MemberGroup.create(group=group, iduser=userkey, role=role, level=role_level.level)
-                    asign.save()
-            else: print("Este grupo no acepta roles")
-
-    def create_event_personal(self, userkey: int, name:str, date_ini:str, date_end:str, privacity:Privacity=Privacity.Public, idgroup:bytes=None):
-        userkey = userkey.to_bytes(20, byteorder='big')
-        account = Account.get(iduser=userkey)
-        event = Event.create(user=account, ename=name, date_ini=date_ini, date_end=date_end, state=State.Personal, 
-                            visibility=privacity, idcreator=userkey, idgroup=idgroup)
-        event.save()
+    # def delete_group(self, userkey: int, id_group: bytes):
+    #     userkey = userkey.to_bytes(20, byteorder='big')
+    #     group = Group.get((Group.group == id_group) & (Group.creator == userkey))
+    #     if group: group.delete_instance(recursive=True)
 
     def create_event_grupal(self, userkey: int, name:str, date_ini:str, date_end:str, privacity:Privacity=Privacity.Public, idgroup:bytes=None):
         userkey = userkey.to_bytes(20, byteorder='big')
@@ -252,13 +299,6 @@ class DBModel:
         registers = Event.select().where((Event.user == true_id)&(Event.state==State.Pendient))
         for register in registers:
             print(register.ename, register.date_ini, register.date_end)
-
-    def show_all_events(self):
-        Event._meta.database = self.database
-        true_id = self.id.to_bytes(20, byteorder='big')
-        registers = Event.select().where(Event.user == true_id)
-        for register in registers:
-            print(register.ename, register.date_ini, register.date_end, register.state)
 
     def acept_event(self, idevent:bytes):
         Event._meta.database = self.database
@@ -396,6 +436,11 @@ class DBModel:
 # node1.create_account(user1,"Jordan", "Pla Gonzalez","esmionotuyo")
 # node1.create_account(user2,"Dianelys", "Cruz Mengana","mecagoento")
 
+# node1.create_personal_event(user1, "Boda de Hermana", "23/12/21-08:35", "23/12/21-16:00", "Publico")
+# node1.create_personal_event(user1, "Cumple de Prima", "23/12/21-09:35", "23/12/21-18:00", "Publico")
+# ids, texts = node1.get_notifications(user1)
+# for text in texts:
+#     print(text)
 # node1.add_notification(user1,"Tienes un evento que colisiona")
 # node1.add_notification(user1,"Tienes pendiente de aceptacion un evento")
 # node1.add_notification(user2,"Tienes un evento que colisiona")

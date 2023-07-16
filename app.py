@@ -15,7 +15,7 @@ class Client:
         self.server_addr = server_addr
         self.addr = my_address
    
-    def recieve_data(self,request):
+    def recieve_data(self,request):   # ESTO ES LO QUE HABLAMOS QUE IBAS A CORREGIR PORQUE NO USAS LOS REQUEST
         conn, addr = self.receiver.accept()
         msg=conn.recv(1024)
         msg = msg.decode('utf-8')
@@ -29,70 +29,70 @@ class Client:
     def create_account(self, user_key, user_name, last_name, password,address=None):
         if not address: address = self.server_addr
         self.user_key = hash_key(user_key)
-        data = {"message": CREATE_PROFILE, "ip":"127.0.0.1" , "port": "5557", "user_key": self.user_key ,
-                "user_name": user_name , "last_name":last_name , "password":password  }
+        data = {"message": CREATE_PROFILE, "ip": "127.0.0.1", "port": "5557", "user_key": self.user_key, "user_name": user_name, "last_name": last_name, "password": password  }
         print(f"Sending CREATE_PROFILE {self.user_key} request to {str(address)}")
         send_request(address,data,False,False)
         time.sleep(4)
 
     def get_account(self, user_key, password,address=None):
         if not address: address = self.server_addr
-        self.user_key = user_key
+        self.user_key = hash_key(user_key)
         request = GET_PROFILE
-        data = {"message":request, "ip":"127.0.0.1", "port":"5557", "user_key":self.user_key, "password":password ,"sender_addr":self.addr }
+        data = {"message": request, "ip": "127.0.0.1", "port": "5557", "user_key": self.user_key, "password": password, "sender_addr": self.addr  }
         print(f"Sending GET_PROFILE request to {str(address)}")
-        data = send_request(address,data,False,False)
+        send_request(address,data,False,False)
         time.sleep(4)
         data = self.recieve_data(request)       
-        return data['user_name'] if data else None, data['last_name'] if data else None
-
-    def delete_account(self,address=None):
+        return data['user_name'], data['last_name']
+    
+    def create_group(self, group_name, group_type,address=None):
         if not address: address = self.server_addr
-        data = {"message":DELETE_PROFILE, "ip":"127.0.0.1", "port":"5557", "user_key":self.user_key  }
-        if not address: address = self.server_addr
-        print(f"Sending DELETE_PROFILE request to {str(address)}")
-        send_request(address,data,False,False)
-        time.sleep(4)
-
-    def create_personal_event(self, event_name, date_initial, date_end, privacity,address=None):
-        data = {"message":CREATE_PEVENT, "ip":"127.0.0.1", "port":"5557", "user_key":self.user_key, "event_name":event_name,
-                "date_initial":date_initial , "date_end":date_end, "visibility":privacity, "creator":self.user_key  }
-        if not address: address = self.server_addr
-        print(f"Sending CREATE_PEVENT request to {str(address)}")
-        send_request(address,data,False,False)
-        time.sleep(4)
-
-    def create_group(self, group_name, group_type, group_description,address=None):
-        data = {"message":CREATE_GROUP, "ip":"127.0.0.1", "port":"5557", "user_key":self.user_key,
-                "group_name":group_name , "group_type":group_type, "group_description":group_description  }
-        if not address: address = self.server_addr
+        data = {"message": CREATE_GROUP, "ip": "127.0.0.1", "port": "5557", "user_key": self.user_key, "group_name": group_name, "group_type": group_type  }
         print(f"Sending CREATE_GROUP request to {str(address)}")
         send_request(address,data,False,False)
         time.sleep(4)
 
     def get_notifications(self,address=None):
-        data = {"message":GET_NOTIFICATIONS, "ip":"127.0.0.1", "port":"5557", "user_key":self.user_key  }
         if not address: address = self.server_addr
+        request = GET_NOTIFICATIONS
+        data = {"message": request, "ip": "127.0.0.1", "port": "5557", "user_key": self.user_key, "sender_addr": self.addr  }
         print(f"Sending GET_NOTIFICATIONS request to {str(address)}")
-        data = send_request(address,data,True,False)
+        send_request(address,data,False,False)
         time.sleep(4)
-        return data['ids'] if data else None, data['text'] if data else None
+        data = self.recieve_data(request) 
+        return data['ids'], data['texts']
 
     def delete_notification(self, id_notification,address=None):
-        data = {"message":DELETE_NOTIFICATION, "ip":"127.0.0.1", "port":"5557", "user_key":self.user_key, "id_notification":id_notification  }
         if not address: address = self.server_addr
+        data = {"message": DELETE_NOTIFICATION, "ip": "127.0.0.1", "port": "5557", "user_key": self.user_key, "id_notification": id_notification  }
         print(f"Sending DELETE_NOTIFICATION request to {str(address)}")
         send_request(address,data,False,False)
         time.sleep(4)
 
-    def get_all_events(self,address=None):
-        data = {"message":GET_EVENTS, "ip":"127.0.0.1", "port":"5557", "user_key":self.user_key }
+    def create_personal_event(self, event_name, date_initial, date_end, privacity,address=None):
         if not address: address = self.server_addr
-        print(f"Sending GET_EVENTS request to {str(address)}")
-        data = send_request(address,data,True,False)
+        data = {"message": CREATE_PEVENT, "ip": "127.0.0.1", "port": "5557", "user_key": self.user_key, "event_name": event_name, "date_initial": date_initial , "date_end": date_end, "visibility": privacity  }
+        print(f"Sending CREATE_PEVENT request to {str(address)}")
+        send_request(address,data,False,False)
         time.sleep(4)
-        return data["ids"], data["name"], data["date_ini"], data["data_end"], data["state"], data["creator"]
+    
+    def get_all_events(self,address=None):
+        if not address: address = self.server_addr
+        request = GET_EVENTS
+        data = {"message": request, "ip": "127.0.0.1", "port": "5557", "user_key": self.user_key, "sender_addr": self.addr  }
+        print(f"Sending GET_EVENTS request to {str(address)}")
+        send_request(address,data,False,False)
+        time.sleep(4)
+        data = self.recieve_data(request) 
+        return data["ids_event"],data["event_names"],data["dates_ini"],data["datas_end"],data["states"],data["visibilities"],data["creators"],data["id_groups"]
 
+
+    
+    
+
+
+    # PENDIENTES A ARREGLAR (NO ESPERES QUE SIRVAN AUN) ********************************************************************
+    # ESTO ES UN DILEMON
     def delete_event(self, id_event,address=None):
         data = {"message":DELETE_EVENT, "ip":"127.0.0.1", "port":"5557", "user_key":self.user_key, "id_evet":id_event  }
         if not address: address = self.server_addr
