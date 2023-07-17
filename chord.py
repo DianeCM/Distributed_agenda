@@ -72,7 +72,7 @@ class ChordNode:
     def Req_Method(self):
         return { CREATE_PROFILE: self.create_account , CREATE_GROUP: self.create_group, REP_GROUP:self.create_group, CREATE_EVENT: self.create_event, REP_PROFILE: self.create_account,
                 GET_PROFILE: self.get_account,GET_GROUPS: self.get_groups_belong_to, GET_EVENTS:self.get_all_events,REP_EVENT: self.create_event, GET_NOTIFICATIONS: self.get_notifications,
-                DELETE_NOTIFICATION:self.delete_notification}
+                DELETE_NOTIFICATION:self.delete_notification,DELETE_NOTIFICATION_REP:self.delete_notification, ACEPT_EVENT: self.acept_pendient_event,ACEPT_EVENT_REP:self.acept_pendient_event, DELETE_EVENT: self.delete_event}
     
     @property
     def Serialize_Address(self):
@@ -126,7 +126,7 @@ class ChordNode:
             
             request = msg["message"]
 
-            #someone wants to contact us to join to the network
+            #someone wants to contact me to join to the network
             if request == JOIN_REQ:   
                 data = {"message": JOIN_REP, "ip": self.address.ip , "ports": self.address.ports , "nodeID": self.nodeID, "leader": self.leader}
                 newID = msg["nodeID"]
@@ -511,3 +511,8 @@ class ChordNode:
       
     def acept_pendient_event(self,data):
         self.db.acept_pendient_event(data["user_key"],data["id_event"])
+
+    def delete_event(self,data):
+        user_key = data["user_key"] 
+        id_event = data["id_evet"]
+        self.db.delete_event(user_key,id_event) 
