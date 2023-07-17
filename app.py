@@ -62,7 +62,7 @@ class Client:
         send_request(address,data,False,False)
         time.sleep(4)
 
-    def create_event(self, event_name, date_initial, date_end, privacity=Privacity.Public.value, state=State.Personal.value, id_group=None, id_creator=None, address=None):
+    def create_personal_event(self, event_name, date_initial, date_end, privacity=Privacity.Public.value, state=State.Personal.value, id_group=None, id_creator=None, address=None):
         if not address: address = self.server_addr
         data = {"message": CREATE_EVENT, "ip": "127.0.0.1", "port": "5557", "user_key": self.user_key, "event_name": event_name, 
                 "date_initial": date_initial , "date_end": date_end, "visibility": privacity, "state": state, "group":id_group, "creator":id_creator  }
@@ -141,9 +141,9 @@ class Client:
             members = ids_user
         else: members = self.get_equal_members(self.user_key,id_group,address)
         for id_user in members: 
-            if id_user == str(self.user_key): self.create_event(event_name,date_initial,date_end,Privacity.Public.value,State.Asigned.value,id_group,str(self.user_key),address)
-            elif gtype == GType.Non_hierarchical.value: self.create_event(event_name,date_initial,date_end,Privacity.Public.value,State.Asigned.value,id_group,str(self.user_key),address)
-            else: self.create_event(event_name,date_initial,date_end,Privacity.Public.value,State.Pendient.value,id_group,str(self.user_key),address)
+            if id_user == str(self.user_key): self.create_personal_event(event_name,date_initial,date_end,Privacity.Public.value,State.Asigned.value,id_group,str(self.user_key),address)
+            elif gtype == GType.Non_hierarchical.value: self.create_personal_event(event_name,date_initial,date_end,Privacity.Public.value,State.Asigned.value,id_group,str(self.user_key),address)
+            else: self.create_personal_event(event_name,date_initial,date_end,Privacity.Public.value,State.Pendient.value,id_group,str(self.user_key),address)
 
     def add_member(self, id_group, id_user, group_name, group_type, role=None, level=None,address=None):
         if not address: address = self.server_addr # EJUN GRUPO DEL QUE SE ES CREADOR

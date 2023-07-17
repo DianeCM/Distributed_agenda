@@ -124,10 +124,12 @@ class DBModel:
 
     def create_account(self, userkey: int, name: str, last_name: str, password: str):
         userkeyn = str(userkey)
-        try: account = Account.create(user=userkeyn, name=name, last=last_name, passw=password)
+        try: 
+            account = Account.create(user=userkeyn, name=name, last=last_name, passw=password)
+            account.save()
         except IntegrityError:
-            print("Nombre de usuario ya existe")
-        account.save()
+            notify_data("Nombre de usuario ya existe","Error")
+        
 
     def get_account(self, userkey: int, password: str):
         userkeyn = str(userkey)
