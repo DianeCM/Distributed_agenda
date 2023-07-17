@@ -3,6 +3,7 @@ from termcolor import colored
 import json
 import socket
 import zipfile
+import os
 
 def hash_key(key: str) -> int:
     """
@@ -13,14 +14,14 @@ def hash_key(key: str) -> int:
     return hash_value
 
 class Address(object):
-		def __init__(self,ip,port1,port2):
+		def __init__(self,ip,port1,port2,port3):
 			self.ip=ip
-			self.ports = (port1,port2)
+			self.ports = (port1,port2,port3)
 			
 		def __str__(self):
 			return f"tcp://{self.ip}:{self.ports[0]}"
 	
-def send_request(address,data,answer_requiered,expected_zip_file):     
+def send_request(address,data=None,answer_requiered=False,expected_zip_file=False,num_bytes=1024):     
             sender = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             try : sender.connect(address)
             except ConnectionRefusedError as e :
@@ -30,37 +31,48 @@ def send_request(address,data,answer_requiered,expected_zip_file):
                 
             # establecer un tiempo de espera de 10 segundos
             sender.settimeout(10)
-            json_data = json.dumps(data).encode('utf-8')
-
-            #print("Sending Message")
-            sender.send(json_data)
+            if data:
+                json_data = json.dumps(data).encode('utf-8')
+                sender.send(json_data)
+            else: send_copy_db(sender,num_bytes)
 
             if answer_requiered:
               try:
                 # Esperar la llegada de un mensaje
                 
                 if not expected_zip_file:
-                  data = sender.recv(1024)
+                  data = sender.recv(num_bytes)
                   data = data.decode('utf-8')
                   data = json.loads(data) 
                   sender.close()
                 else:
-                    data= False
-                    f = open("copia.db",'wb') #open in binary     
-                        # receive data and write it to file
-                    l = sender.recv(1024)
-                    
-                    while (l):
-                          data = True
-                          f.write(l)
-                          l = sender.recv(1024)
-                    f.close()
+                    data = recieve_copy_db(sender,num_bytes)
               except socket.timeout:
                 # Manejar la excepción si se agotó el tiempo de espera
                 if not expected_zip_file or not data: notify_data("Tiempo de espera agotado para recibir un mensaje","Error")
             sender.close()
             return data 
 
+def send_copy_db(conn,num_bytes = 1024):
+        f = open ("copia.db", "rb")
+        l = f.read(num_bytes)
+        while (l):
+            conn.send(l)
+            l = f.read(num_bytes)
+        os.remove("copia.db")
+
+def recieve_copy_db(conn,num_bytes = 1024):
+    data= False
+    f = open("copia.db",'wb') #open in binary     
+    # receive data and write it to file
+    l = conn.recv(num_bytes)                  
+    while (l):
+          data = True
+          f.write(l)
+          l = conn.recv(num_bytes)
+    f.close()
+    return data
+   
 def notify_data(data,data_type):
 	colors = {"Error":"red", "GetData": "yellow", "Join": "blue", "SetData": "magenta",'database':"green", "Check":"cyan" }
 	print(colored(data,colors[data_type]))

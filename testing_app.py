@@ -150,66 +150,66 @@ print(p.get_all_events(addr[random.randint(1,2)]))
 print(p.get_notifications(addr[random.randint(1,2)]))
 
 
-# assert p.get_account("por fiiiinnn","bruder",addr[random.randint(1,2)]) == ("Blau","lamoru")
-# print(p.get_groups_belong_to(addr[random.randint(1,2)]))
-# print(p.get_all_events(addr[random.randint(1,2)]))
-# print(p.get_notifications(addr[random.randint(1,2)]))
+assert p.get_account("por fiiiinnn","bruder",addr[random.randint(1,2)]) == ("Blau","lamoru")
+print(p.get_groups_belong_to(addr[random.randint(1,2)]))
+print(p.get_all_events(addr[random.randint(1,2)]))
+print(p.get_notifications(addr[random.randint(1,2)]))
 
 
-# assert p.get_account("Ultimo_intento","bruder",addr[random.randint(1,2)]) == ("yeyo","lamoru")
-# print(p.get_groups_belong_to(addr[random.randint(1,2)]))
-# print(p.get_all_events(addr[random.randint(1,2)]))
+assert p.get_account("Ultimo_intento","bruder",addr[random.randint(1,2)]) == ("yeyo","lamoru")
+print(p.get_groups_belong_to(addr[random.randint(1,2)]))
+print(p.get_all_events(addr[random.randint(1,2)]))
 
 
-# assert p.get_account("Duke","bruder",addr[random.randint(1,2)]) == ("Alma","lopez")
-# print(p.get_groups_belong_to(addr[random.randint(1,2)]))
-# print(p.get_all_events(addr[random.randint(1,2)]))
-# print(p.get_notifications(addr[random.randint(1,2)]))
+assert p.get_account("Duke","bruder",addr[random.randint(1,2)]) == ("Alma","lopez")
+print(p.get_groups_belong_to(addr[random.randint(1,2)]))
+print(p.get_all_events(addr[random.randint(1,2)]))
+print(p.get_notifications(addr[random.randint(1,2)]))
 
 
-# assert p.get_account("pssss","bruder",addr[random.randint(1,2)]) == ("Ana","Paula")
-# print(p.get_groups_belong_to(addr[random.randint(1,2)]))
-# print(p.get_all_events(addr[random.randint(1,2)]))
-# print(p.get_notifications(addr[random.randint(1,2)]))
+assert p.get_account("pssss","bruder",addr[random.randint(1,2)]) == ("Ana","Paula")
+print(p.get_groups_belong_to(addr[random.randint(1,2)]))
+print(p.get_all_events(addr[random.randint(1,2)]))
+print(p.get_notifications(addr[random.randint(1,2)]))
 
 
-# assert p.get_account("balablabaka","bruder",addr[random.randint(1,2)]) == ("Le putain","lamoru")
-# print(p.get_groups_belong_to(addr[random.randint(1,2)]))
-# print(p.get_all_events(addr[random.randint(1,2)]))
-# print(p.get_notifications(addr[random.randint(1,2)]))
+assert p.get_account("balablabaka","bruder",addr[random.randint(1,2)]) == ("Le putain","lamoru")
+print(p.get_groups_belong_to(addr[random.randint(1,2)]))
+print(p.get_all_events(addr[random.randint(1,2)]))
+print(p.get_notifications(addr[random.randint(1,2)]))
 
 
-# assert p.get_account("die Farben","bruder",addr[random.randint(1,2)]) == ("Lola","lamoru")
-# print(p.get_groups_belong_to(addr[random.randint(1,2)]))
-# print(p.get_all_events(addr[random.randint(1,2)]))
-# print(p.get_notifications(addr[random.randint(1,2)]))
+assert p.get_account("die Farben","bruder",addr[random.randint(1,2)]) == ("Lola","lamoru")
+print(p.get_groups_belong_to(addr[random.randint(1,2)]))
+print(p.get_all_events(addr[random.randint(1,2)]))
+print(p.get_notifications(addr[random.randint(1,2)]))
 
 
-# assert p.get_account("die Krankenhouse","bruder",addr[random.randint(1,2)]) == ("Yo","lopez")
-# print(p.get_groups_belong_to(addr[random.randint(1,2)]))
-# print(p.get_all_events(addr[random.randint(1,2)]))
+assert p.get_account("die Krankenhouse","bruder",addr[random.randint(1,2)]) == ("Yo","lopez")
+print(p.get_groups_belong_to(addr[random.randint(1,2)]))
+print(p.get_all_events(addr[random.randint(1,2)]))
 
 
-# assert p.get_account("Endlichkeit","bruder",addr[random.randint(1,2)]) == ("Paul","Paula")
-# print(p.get_groups_belong_to(addr[random.randint(1,2)]))
-# print(p.get_all_events(addr[random.randint(1,2)]))
-# print(p.get_notifications(addr[random.randint(1,2)]))
+assert p.get_account("Endlichkeit","bruder",addr[random.randint(1,2)]) == ("Paul","Paula")
+print(p.get_groups_belong_to(addr[random.randint(1,2)]))
+print(p.get_all_events(addr[random.randint(1,2)]))
+print(p.get_notifications(addr[random.randint(1,2)]))
 
 
-# assert p.get_account("99 Luftballons","bruder",addr[random.randint(1,2)]) == ("Nena","lamoru")
-# print(p.get_groups_belong_to(addr[random.randint(1,2)]))
-# print(p.get_all_events(addr[random.randint(1,2)]))
-# print(p.get_notifications(addr[random.randint(1,2)]))
+assert p.get_account("99 Luftballons","bruder",addr[random.randint(1,2)]) == ("Nena","lamoru")
+print(p.get_groups_belong_to(addr[random.randint(1,2)]))
+print(p.get_all_events(addr[random.randint(1,2)]))
+print(p.get_notifications(addr[random.randint(1,2)]))
 
 
-# assert p.get_account("Ist da jemand","bruder",addr[random.randint(1,2)]) == ("Ich weiss es nicht","lamoru")
-# print(p.get_groups_belong_to(addr[random.randint(1,2)]))
-# print(p.get_all_events(addr[random.randint(1,2)]))
-# print(p.get_notifications(addr[random.randint(1,2)]))
+assert p.get_account("Ist da jemand","bruder",addr[random.randint(1,2)]) == ("Ich weiss es nicht","lamoru")
+print(p.get_groups_belong_to(addr[random.randint(1,2)]))
+print(p.get_all_events(addr[random.randint(1,2)]))
+print(p.get_notifications(addr[random.randint(1,2)]))
 
 
-# assert p.get_account("Einsam ohne dich","bruder",addr[random.randint(1,2)]) == ("Lea Marie","Paula")
-# print(p.get_groups_belong_to(addr[random.randint(1,2)]))
-# print(p.get_all_events(addr[random.randint(1,2)]))
-# print(p.get_notifications(addr[random.randint(1,2)]))
+assert p.get_account("Einsam ohne dich","bruder",addr[random.randint(1,2)]) == ("Lea Marie","Paula")
+print(p.get_groups_belong_to(addr[random.randint(1,2)]))
+print(p.get_all_events(addr[random.randint(1,2)]))
+print(p.get_notifications(addr[random.randint(1,2)]))
 
