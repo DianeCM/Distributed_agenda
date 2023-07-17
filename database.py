@@ -124,7 +124,9 @@ class DBModel:
 
     def create_account(self, userkey: int, name: str, last_name: str, password: str):
         userkeyn = str(userkey)
-        account = Account.create(user=userkeyn, name=name, last=last_name, passw=password)
+        try: account = Account.create(user=userkeyn, name=name, last=last_name, passw=password)
+        except IntegrityError:
+            print("Nombre de usuario ya existe")
         account.save()
 
     def get_account(self, userkey: int, password: str):
@@ -168,7 +170,7 @@ class DBModel:
             return
         notif.delete_instance(recursive=True)
 
-    def create_personal_event(self, userkey: int, name:str, date_ini:str, date_end:str, privacity:str):
+    def create_event(self, userkey: int, name:str, date_ini:str, date_end:str, state:str, privacity:str, id_group:str, id_creator:str):
         userkeyn = str(userkey)
         try: Account.get(user=userkeyn)
         except DoesNotExist: 
@@ -176,9 +178,11 @@ class DBModel:
             return
         registers = Event.select().where((Event.user == userkeyn) & (((date_ini <= Event.datec) & (Event.datec <= date_end)) | ((date_ini <= Event.datef) & (Event.datef <= date_end))))
         for register in registers:
-            self.__add_notification(userkeyn, f"El evento {name} (Personal) tiene horarios coincidentes con el evento {register.ename} ({register.state})")
-        event = Event.create(user=userkeyn, ename=name, datec=date_ini, datef=date_end, state=State.Personal.value, visib=privacity)
+            self.__add_notification(userkeyn, f"El evento {name} ({state}) tiene horarios coincidentes con el evento {register.ename} ({register.state})")
+        event = Event.create(user=userkeyn, ename=name, datec=date_ini, datef=date_end, state=state, visib=privacity, group=id_group, creator=id_creator)
         event.save()
+        if state == State.Pendient.value:
+            self.__add_notification(userkey, f"Tiene un nuevo evento pendiente: {name}")
 
     def get_all_events(self, userkey: int, privacity:bool=False):
         userkeyn = str(userkey)
@@ -206,6 +210,15 @@ class DBModel:
             creators.append(register.creator)
             idgroups.append(register.group)
         return idevent, enames, datesc, datesf, states, visibs, creators, idgroups
+    
+    def get_event(self, userkey: int, id_event: str):
+        userkeyn = str(userkey)
+        try: Account.get(user=userkeyn)
+        except DoesNotExist: 
+            print("Usuario no existe")
+            return
+        event = Event.get((Event.user == userkeyn) & Event.event == id_event)
+        return event.event,event.ename,event.datec,event.datef,event.state,event.visib,event.creator,event.group
     
     def get_groups_belong_to(self, userkey: int):
         userkeyn = str(userkey)
@@ -239,28 +252,35 @@ class DBModel:
         userkeyn = str(userkey)
         member = MemberGroup.get((MemberGroup.group==idgroup) & (MemberGroup.user==userkeyn))
         level = member.level
-        registers = MemberGroup.select().where(MemberGroup.level > level)
+        registers = MemberGroup.select().where((MemberGroup.group==idgroup) & (MemberGroup.level > level))
         ids = []
         for register in registers:
             ids.append(register.user)
         return ids
     
-    def create_groupal_event(self, userkey: int, name:str, date_ini:str, date_end:str, id_group:str, creatorkey:str):
-        userkeyn = str(userkey)
-        try: Account.get(user=userkeyn)
+    def get_equal_members(self, idgroup:str):
+        registers = MemberGroup.select().where(MemberGroup.group==idgroup)
+        ids = []
+        roles = []
+        for register in registers:
+            ids.append(register.user)
+            roles.append(register.role)
+        return ids,roles
+    
+    def get_group_type(self, idgroup:str, creatorkey:int):
+        creatorkeyn = str(creatorkey)
+        try: Account.get(user=creatorkeyn)
         except DoesNotExist: 
             print("Usuario no existe")
             return
-        registers = Event.select().where((Event.user == userkeyn) & ((date_ini <= Event.datec <=date_end) | (date_ini <= Event.datef <= date_end)))
-        for register in registers:
-            self.__add_notification(userkeyn, f"El evento {name} ({state}) tiene horarios coincidentes con el evento {register.ename} ({register.state})")
-        if creatorkey == userkeyn: state = State.Asigned.value
-        else: state = State.Pendient.value
-        event = Event.create(user=userkeyn, ename=name, datec=date_ini, datef=date_end, state=state, visib=Privacity.Public.value, group=id_group, creator=creatorkey)
-        event.save()
-        if state == State.Pendient.value:
-            self.__add_notification(userkey, f"Tiene un nuevo evento pendiente: {name}")
-
+        group = Group.get((Group.group == idgroup) & (Group.creator == creatorkeyn))
+        return group.gtype
+    
+    def delete_event(self, idevent:bytes): ############################## TODAVIA ############
+        Event._meta.database = self.database
+        registers = Event.get((Event.idevent == idevent)&(Event.state == State.Personal))
+        if registers: registers.delete_instance(recursive=True)
+        
     def add_member_account(self, userkey:int, idgroup:str, gname:str, gtype:str, idref:str):
         userkeyn = str(userkey)
         try: Account.get(user=userkeyn)
@@ -301,40 +321,6 @@ class DBModel:
         except DoesNotExist: return
         notif = Notification.create(user=userkeyn, text=text)
         notif.save()
-
-    
-
-    
-    
-    
-    # PENDIENTE A CORREGIR ************************************************************************************************
-    def show_user_in_group(self, group: bytes):
-        registers = MemberGroup.select().where(MemberGroup.group == group)
-        for register in registers:
-            print(register.user, register.role)
-
-    def create_event_grupal(self, userkey: int, name:str, date_ini:str, date_end:str, privacity:Privacity=Privacity.Public, idgroup:bytes=None):
-        userkey = userkey.to_bytes(20, byteorder='big')
-        account = Account.get(iduser=userkey)
-        event = Event.create(user=account, ename=name, date_ini=date_ini, date_end=date_end, state=State.Pendient, 
-                            visibility=privacity, idcreator=account.userid, idgroup=idgroup)
-        event.save()
-
-    def show_pendient_events(self):
-        Event._meta.database = self.database
-        true_id = self.id.to_bytes(20, byteorder='big')
-        registers = Event.select().where((Event.user == true_id)&(Event.state==State.Pendient))
-        for register in registers:
-            print(register.ename, register.date_ini, register.date_end)
-
-    def decline_event(self, idevent:bytes):
-        # LLAMAR A TO EL MUNDOS
-        pass
-
-    def delete_event(self, idevent:bytes):
-        Event._meta.database = self.database
-        registers = Event.get((Event.idevent == idevent)&(Event.state == State.Personal))
-        if registers: registers.delete_instance(recursive=True)
 
 
 

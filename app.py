@@ -35,7 +35,6 @@ class Client:
         time.sleep(4)
 
     def get_account(self, user_key, password,address=None):
-        
         self.user_key = hash_key(user_key)
         return self.check_account(self.user_key,address,password=password)
     
@@ -63,10 +62,11 @@ class Client:
         send_request(address,data,False,False)
         time.sleep(4)
 
-    def create_personal_event(self, event_name, date_initial, date_end, privacity,address=None):
+    def create_event(self, event_name, date_initial, date_end, privacity=Privacity.Public.value, state=State.Personal.value, id_group=None, id_creator=None, address=None):
         if not address: address = self.server_addr
-        data = {"message": CREATE_PEVENT, "ip": "127.0.0.1", "port": "5557", "user_key": self.user_key, "event_name": event_name, "date_initial": date_initial , "date_end": date_end, "visibility": privacity  }
-        print(f"Sending CREATE_PEVENT request to {str(address)}")
+        data = {"message": CREATE_EVENT, "ip": "127.0.0.1", "port": "5557", "user_key": self.user_key, "event_name": event_name, 
+                "date_initial": date_initial , "date_end": date_end, "visibility": privacity, "state": state, "group":id_group, "creator":id_creator  }
+        print(f"Sending CREATE_EVENT request to {str(address)}")
         send_request(address,data,False,False)
         time.sleep(4)
     
@@ -107,28 +107,18 @@ class Client:
         data = self.recieve_data(request)       
         return data['user_name'], data['last_name']
 
-
-    # PENDIENTES A ARREGLAR (NO ESPERES QUE SIRVAN AUN) ********************************************************************
-    # ESTO ES UN DILEMON
     def delete_event(self, id_event,address=None):
         if not address: address = self.server_addr
         _,_,_,_,_,_,id_creator,id_group = self.get_event(self.user_key,id_event,address)
-        # SI ES PERSONAL SE ELIMINA Y NO HAY PROBLEMA, 
+        assert id_creator == str(self.user_key)
         if id_group == None: self.delete_user_event(id_event,self.user_key,address)
-        # PERO SI ES CREADOR DE EVENTO GRUPAL HAY UN PROBLEMON GORDO
         else:
-        # IR AL GRUPO EN DONDE FUE CREADO (Llamar el metdo para saber si es jerarquico)
-
-        # SI ES JERARQUICO, HAY QUE ELIMINARLO PARA TODOS LOS JERARQUICAMENTE INFERIOR
-            if non_hierch:
-              members = self.get_inferior_members(id_creator,id_group,address)
-        # SI NO ES JERARQUICO, HAY QUE ELIMINARLO PARA TODOS LOS MIEMBROS DEL GRUPO
-            else:
-                pass
-        # LO QUE IMPLICA PREGUNTAR POR TODOS ESO ID EN LA RED CHORD
-            for member in members:
-                id_user = member[0]
-                self.delete_user_event(id_event,id_user,address)
+            gtype = self.get_group_type(id_creator,id_group,address)
+            if gtype == GType.Non_hierarchical.value: 
+                ids_user,_ = self.get_inferior_members(id_creator,id_group,address)
+                members = ids_user
+            else: members = self.get_equal_members(id_creator,id_group,address)
+            for id_user in members: self.delete_user_event(id_event,id_user,address)
 
     def delete_user_event(self,id_event,user_key,address):
         data = {"message":DELETE_EVENT, "ip":"127.0.0.1", "port":"5557", "user_key":user_key, "id_evet":id_event  }
@@ -137,33 +127,52 @@ class Client:
         time.sleep(4)
 
     def decline_pendient_event(self, id_event,address=None):
-        # AQUI EL SISTEMA SOLO VA A PERMITIR LLEGAR SI ES UN EVENTO DE GRUPO NO JERARQUICO
-        # SE ELIMINA DE ÉL Y SE VA AL GRUPO DONDE FUE CREADO
-        # PARA TODOS LOS MIEMBROS DEL GRUPO SE ELIMINA EL EVENTO (NOTIFICAR QUE EL EVENTO FUE RECHAZADO)
         if not address: address = self.server_addr
-        request = DECLINE_EVENT
-        pass
+        _,_,_,_,state,_,id_creator,id_group = self.get_event(id_event,address)
+        assert state == State.Pendient.value
+        members = self.get_equal_members(id_creator,id_group,address)
+        for id_user in members: self.delete_user_event(id_event,id_user,address)
 
-    def create_groupal_event(self, address=None):
-        # SE CREA EL EVENTO EN EL USUARIO REFERENCIANDO AL GRUPO Y A EL COMO CREADO
-        # IR AL GRUPO EN DONDE FUE CREADO
-        # SI ES JERARQUICO, HAY QUE ASIGNARLO PARA TODOS LOS JERARQUICAMENTE INFERIOR
-        # SI NO ES JERARQUICO, HAY QUE ASIGNARLO PARA TODOS LOS MIEMBROS DEL GRUPO EN PENDIENTE
-        # LO QUE IMPLICA PREGUNTAR POR TODOS ESO ID EN LA RED CHORD
+    def create_groupal_event(self, event_name, date_initial, date_end, id_group, address=None):
         if not address: address = self.server_addr
-        request = CREATE_GEVENT
-        pass
+        gtype = self.get_group_type(self.user_key,id_group,address)
+        if gtype == GType.Hierarchical.value: 
+            ids_user,_ = self.get_inferior_members(self.user_key,id_group,address)
+            members = ids_user
+        else: members = self.get_equal_members(self.user_key,id_group,address)
+        for id_user in members: 
+            if id_user == str(self.user_key): self.create_event(event_name,date_initial,date_end,Privacity.Public.value,State.Asigned.value,id_group,str(self.user_key),address)
+            elif gtype == GType.Non_hierarchical.value: self.create_event(event_name,date_initial,date_end,Privacity.Public.value,State.Asigned.value,id_group,str(self.user_key),address)
+            else: self.create_event(event_name,date_initial,date_end,Privacity.Public.value,State.Pendient.value,id_group,str(self.user_key),address)
 
-    def add_member_to_group(self, id_group, id_user,address=None):
-        # COMPROBAR QUE EL ID DE MIEMBRO EXISTE
-        # PONERLO EN EL MEMBER_GROUP DEL CREADOR (QUE ES EL USUARIO)
-        # PONERLO EN LA MEMBER_ACCOUNT DEL MIEMBRO
-        if not address: address = self.server_addr
+    def add_member(self, id_group, id_user, group_name, group_type, role=None, level=None,address=None):
+        if not address: address = self.server_addr # EJUN GRUPO DEL QUE SE ES CREADOR
         user_name, last_name = self.check_account(id_user,address)
         if  user_name:
-            # PONERLO EN EL MEMBER_GROUP DEL CREADOR (QUE ES EL USUARIO) LO QUE NO ME KEDA CLARO COMO COMPROBAR QUE EL ID DE MIEMBRO EXISTE
-            # PONERLO EN LA MEMBER_ACCOUNT DEL MIEMBRO
-            request = ADD_MEMBER
+            self.add_member_group(id_group, id_user,role,level,address) #MEMBERGROUP
+            self.add_member_account(id_user, id_group, group_name, group_type, str(self.user_key),address) #MEMBERACCOUNT
+
+    def add_member_group(id_group, id_user,role,level,address=None):
+        pass
+
+    def add_member_account(id_user, id_group, group_name, group_type, ref,address=None):
+        pass
+
+    def get_event(self, id_event, address=None):
+        if not address: address = self.server_addr
+        request = GET_EVENT
+        data = {"message": request, "ip": "127.0.0.1", "port": "5557", "user_key": self.user_key, "id_event": id_event, "sender_addr": self.addr  }
+        print(f"Sending GET_EVENT request to {str(address)}")
+        send_request(address,data,False,False)
+        time.sleep(4)
+        data = self.recieve_data(request) 
+        return data["id_event"],data["event_name"],data["date_ini"],data["date_end"],data["states"],data["visibility"],data["creator"],data["id_group"]
+
+    def get_group_type(self, id_creator, id_group,address=None):
+        # IR A LA BASE DE DATOS DEL CREADOR DEL GRUPO
+        # EN EL GRUPO SOLICITAR MIEMBROS INFERIORES AL ROL DEL USUARIO
+        if not address: address = self.server_addr
+        request = GET_HIERARCHICAL_MEMBERS
         pass
 
     def get_inferior_members(self, id_creator, id_group,address=None):
@@ -171,6 +180,13 @@ class Client:
         # EN EL GRUPO SOLICITAR MIEMBROS INFERIORES AL ROL DEL USUARIO
         if not address: address = self.server_addr
         request = GET_HIERARCHICAL_MEMBERS
+        pass
+
+    def get_equal_members(self, id_creator, id_group,address=None):
+        # IR A LA BASE DE DATOS DEL CREADOR DEL GRUPO
+        # EN EL GRUPO SOLICITAR MIEMBROS INFERIORES AL ROL DEL USUARIO
+        if not address: address = self.server_addr
+        request = GET_NON_HIERARCHICAL_MEMBERS
         pass
         
     def get_member_events(self, id_member,address=None):

@@ -177,7 +177,6 @@ class System:
                     if line != "2": break
                     if password == password2:
                         user.create_account(username,name,last_name,password)
-                        print("Cuenta creada correctamente")
                         time.sleep(2)
                         line = "home"
                     else: 
