@@ -9,7 +9,7 @@ from app import *
 
 class System:
     def show_home(self):
-        os.system('cls')
+        os.system('clear')
         print("********************************************************************************************************")
         print("*                                                                                                      *")
         print("*                                     Bienvenido a Diagenda                                            *")
@@ -22,7 +22,7 @@ class System:
         print("<exit>: cerrar la aplicación")
 
     def show_profile(self, name, last_name):
-        os.system('cls')
+        os.system('clear')
         print("********************************************************************************************************")
         print("*                                                                                                      *")
         print("*                                        Perfil de Usuario                                             *")
@@ -41,7 +41,7 @@ class System:
         print("<exit>: cerrar la aplicación")
 
     def show_notification(self, name, last_name, ids, texts):
-        os.system('cls')
+        os.system('clear')
         print("*******************************************************************************************************")
         print("*                                                                                                     *")
         print("*                                         Notificaciones                                              *")
@@ -61,7 +61,7 @@ class System:
         print("")
 
     def show_event(self, name, last_name, ids_event, event_names, dates_ini, dates_end, states , visibilities, creators, id_groups):
-        os.system('cls')
+        os.system('clear')
         print("*******************************************************************************************************")
         print("*                                                                                                     *")
         print("*                                             Eventos                                                 *")
@@ -83,7 +83,7 @@ class System:
         print("")
 
     def show_group(self, name, last_name, groups):
-        os.system('cls')
+        os.system('clear')
         print("******************************************************************************************************")
         print("*                                                                                                    *")
         print("*                                             Grupos                                                 *")
@@ -105,7 +105,7 @@ class System:
         print("")
 
     def show_member(self, name, last_name, creator, gname, members):
-        os.system('cls')
+        os.system('clear')
         print("******************************************************************************************************")
         print("*                                                                                                    *")
         print("*                            Miembros Jerárquicamente Inferiores                                     *")
@@ -127,14 +127,14 @@ class System:
         print("")
 
     def start_console(self):
-        user = Client(("127.0.0.1",5557),("127.0.0.1",int("5123")))
+        user = Client(("127.0.0.1",5557),("127.0.0.1",int("5050")))
         while True:
             self.show_home()
             line_char = "> "
             line = input(line_char)
             if line == "2":
                 while line == "2":
-                    os.system('cls')
+                    os.system('clear')
                     print("<home>: volver a la vista principal")
                     print("<exit>: cerrar la aplicación")
                     print("")
@@ -183,7 +183,7 @@ class System:
                         time.sleep(2)
             elif line == "1":
                 while line == "1":
-                    os.system('cls')
+                    os.system('clear')
                     print("<home>: volver a la vista principal")
                     print("<exit>: cerrar la aplicación")
                     print("")
@@ -209,7 +209,7 @@ class System:
                                 line = input(line_char)
                                 if line == "1": 
                                     while line == "1":
-                                        os.system('cls')
+                                        os.system('clear')
                                         print("<back>: regresar al perfil")
                                         print("<home>: volver a la vista principal")
                                         print("<exit>: cerrar la aplicación")
@@ -265,7 +265,7 @@ class System:
                                         break
                                 if line == "2":   
                                     while line == "2":
-                                        os.system('cls')
+                                        os.system('clear')
                                         print("<back>: regresar al perfil")
                                         print("<home>: volver a la vista principal")
                                         print("<exit>: cerrar la aplicación")
@@ -303,7 +303,7 @@ class System:
                                         line = input(line_char)
                                         if line == "1":
                                             while True:
-                                                os.system('cls')
+                                                os.system('clear')
                                                 print("<back>: regresar al perfil")
                                                 print("<home>: volver a la vista principal")
                                                 print("<exit>: cerrar la aplicación")
@@ -330,7 +330,7 @@ class System:
                                         line = input(line_char)
                                         if line == "1":
                                             while True:
-                                                os.system('cls')
+                                                os.system('clear')
                                                 print("<back>: regresar al perfil")
                                                 print("<home>: volver a la vista principal")
                                                 print("<exit>: cerrar la aplicación")
@@ -351,7 +351,7 @@ class System:
                                                     else: print("Este evento no es personal o no es creado por usted")
                                         elif line == "2":
                                             while True:
-                                                os.system('cls')
+                                                os.system('clear')
                                                 print("<back>: regresar al perfil")
                                                 print("<home>: volver a la vista principal")
                                                 print("<exit>: cerrar la aplicación")
@@ -372,7 +372,7 @@ class System:
                                                     else: print("Este evento no está pendiente a confirmación")
                                         elif line == "3":
                                             while True:
-                                                os.system('cls')
+                                                os.system('clear')
                                                 print("<back>: regresar al perfil")
                                                 print("<home>: volver a la vista principal")
                                                 print("<exit>: cerrar la aplicación")
