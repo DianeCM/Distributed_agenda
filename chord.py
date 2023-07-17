@@ -476,9 +476,7 @@ class ChordNode:
             notify_data("This account doesn't exist","Error")
     
     def create_group(self,data):
-        g_type = data["group_type"]
-        g_type = GType.Hierarchical  if g_type == "Jerárquico" else GType.Non_hierarchical
-        self.db.create_group(data["user_key"],data["group_name"],g_type)
+        self.db.create_group(data["user_key"],data["group_name"],data["group_type"])
     
     def get_notifications(self,data):
         ids,texts=self.db.get_notifications(data["user_key"])
@@ -492,8 +490,6 @@ class ChordNode:
         self.db.delete_notification(data["user_key"],data["id_notification"])
 
     def create_personal_event(self,data):
-        priv = data["visibility"]
-        priv = Privacity.Public  if priv == "Público" else Privacity.Private
         self.db.create_personal_event(data["user_key"],data["event_name"],data["date_initial"],data["date_end"],data["visibility"])
 
     def get_all_events(self,data):

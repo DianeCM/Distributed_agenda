@@ -15,7 +15,7 @@ class Client:
         self.server_addr = server_addr
         self.addr = my_address
    
-    def recieve_data(self,request):   # ESTO ES LO QUE HABLAMOS QUE IBAS A CORREGIR PORQUE NO USAS LOS REQUEST
+    def recieve_data(self,request):
         conn, addr = self.receiver.accept()
         msg=conn.recv(1024)
         msg = msg.decode('utf-8')
@@ -155,6 +155,9 @@ class Client:
         pass
 
     def add_member_to_group(self, id_group, id_user,address=None):
+        # COMPROBAR QUE EL ID DE MIEMBRO EXISTE
+        # PONERLO EN EL MEMBER_GROUP DEL CREADOR (QUE ES EL USUARIO)
+        # PONERLO EN LA MEMBER_ACCOUNT DEL MIEMBRO
         if not address: address = self.server_addr
         user_name, last_name = self.check_account(id_user,address)
         if  user_name:
