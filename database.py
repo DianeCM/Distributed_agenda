@@ -100,16 +100,6 @@ class Event(Model):
     class Meta:
         database = None
         primary_key = CompositeKey('user', 'event')
-        autoincremental = 1
-
-    def save(self, *args, **kwargs):
-        if not self.event:
-            idcurrent = Event._meta.autoincremental
-            user = int(self.user)
-            idcurrent = hash_key(f'{user}_{idcurrent}')
-            self.event = str(idcurrent)
-            Event._meta.autoincremental += 1
-        Model.save(self, *args, **kwargs)
 
 
 class DBModel:
@@ -172,7 +162,7 @@ class DBModel:
             return
         notif.delete_instance(recursive=True)
 
-    def create_event(self, userkey: int, name:str, date_ini:str, date_end:str, state:str, privacity:str, id_group:str, id_creator:str):
+    def create_event(self, userkey: int, id_event:str, name:str, date_ini:str, date_end:str, state:str, privacity:str, id_group:str, id_creator:str):
         userkeyn = str(userkey)
         try: Account.get(user=userkeyn)
         except DoesNotExist: 
@@ -181,7 +171,7 @@ class DBModel:
         registers = Event.select().where((Event.user == userkeyn) & (((date_ini <= Event.datec) & (Event.datec <= date_end)) | ((date_ini <= Event.datef) & (Event.datef <= date_end))))
         for register in registers:
             self.__add_notification(userkeyn, f"El evento {name} ({state}) tiene horarios coincidentes con el evento {register.ename} ({register.state})")
-        event = Event.create(user=userkeyn, ename=name, datec=date_ini, datef=date_end, state=state, visib=privacity, group=id_group, creator=id_creator)
+        event = Event.create(user=userkeyn, event=id_event, ename=name, datec=date_ini, datef=date_end, state=state, visib=privacity, group=id_group, creator=id_creator)
         event.save()
         if state == State.Pendient.value:
             self.__add_notification(userkey, f"Tiene un nuevo evento pendiente: {name}")
@@ -205,8 +195,8 @@ class DBModel:
         for register in registers:
             idevent.append(register.event)
             enames.append(register.ename)
-            datesc.append(register.datec.strftime('%Y-%m-%d %H:%M'))
-            datesf.append(register.datef.strftime('%Y-%m-%d %H:%M'))
+            datesc.append(register.datec)#.strftime('%Y-%m-%d %H:%M'))
+            datesf.append(register.datef)#.strftime('%Y-%m-%d %H:%M'))
             states.append(register.state)
             visibs.append(register.visib)
             creators.append(register.creator)

@@ -36,12 +36,11 @@ class System:
         print("3. Notificaciones")
         print("4. Eventos")
         print("5. Grupos")
-        #print("6. Borrar Cuenta")
         print("")
         print("<home>: volver a la vista principal")
         print("<exit>: cerrar la aplicación")
 
-    def show_notification(self, name, last_name, notifications):
+    def show_notification(self, name, last_name, ids, texts):
         os.system('cls')
         print("*******************************************************************************************************")
         print("*                                                                                                     *")
@@ -51,17 +50,17 @@ class System:
         print(f"Nombre: {name}")
         print(f"Apellidos: {last_name}")
         print("")
-        for (notif,text) in notifications:
-            print(f"{notif} {text}")
-        print("")
-        print("")
-        print("1. Eliminar notificación <id>")
+        for i,text in enumerate(texts):
+            print(f"{ids[i]} {text}")
         print("")
         print("<back>: regresar al perfil")
         print("<home>: volver a la vista principal")
         print("<exit>: cerrar la aplicación")
+        print("")
+        print("1. Eliminar notificación <id>")
+        print("")
 
-    def show_event(self, name, last_name, events):
+    def show_event(self, name, last_name, ids_event, event_names, dates_ini, dates_end, states , visibilities, creators, id_groups):
         os.system('cls')
         print("*******************************************************************************************************")
         print("*                                                                                                     *")
@@ -71,17 +70,17 @@ class System:
         print(f"Nombre: {name}")
         print(f"Apellidos: {last_name}")
         print("")
-        for (notif,text) in events:
-            print(f"{notif} {text}")
+        for i,ename in enumerate(event_names):
+            print(f"{ids_event[i]} {ename[i]} {dates_ini[i]} {dates_end[i]} {states[i]} {visibilities[i]} {creators[i]} {id_groups[i]}")
         print("")
+        print("<back>: regresar al perfil")
+        print("<home>: volver a la vista principal")
+        print("<exit>: cerrar la aplicación")
         print("")
         print("1. Eliminar evento (personal o creado) <idevent>")
         print("2. Aceptar evento (pendiente) <idevent>")
         print("3. Rechazar evento (pendiente) <idevent>")
         print("")
-        print("<back>: regresar al perfil")
-        print("<home>: volver a la vista principal")
-        print("<exit>: cerrar la aplicación")
 
     def show_group(self, name, last_name, groups):
         os.system('cls')
@@ -96,14 +95,14 @@ class System:
         for (notif,text) in groups:
             print(f"{notif} {text}")
         print("")
+        print("<back>: regresar al perfil")
+        print("<home>: volver a la vista principal")
+        print("<exit>: cerrar la aplicación")
         print("")
         print("1. Crear evento grupal <idgroup>")
         print("2. Agregar miembros (grupo creado/usuario existente) <idgroup> <iduser>")
         print("3. Solicitar miembros jerárquicamente inferior <idgroup>")
         print("")
-        print("<back>: regresar al perfil")
-        print("<home>: volver a la vista principal")
-        print("<exit>: cerrar la aplicación")
 
     def show_member(self, name, last_name, creator, gname, members):
         os.system('cls')
@@ -120,15 +119,15 @@ class System:
         for (notif,text) in members:
             print(f"{notif} {text}")
         print("")
-        print("")
-        print("1. Solicitar eventos de miembro <idmember>")
-        print("")
         print("<back>: regresar al perfil")
         print("<home>: volver a la vista principal")
         print("<exit>: cerrar la aplicación")
+        print("")
+        print("1. Solicitar eventos de miembro <idmember>")
+        print("")
 
     def start_console(self):
-        user = Client()
+        user = Client(("127.0.0.1",5557),("127.0.0.1",int("5123")))
         while True:
             self.show_home()
             line_char = "> "
@@ -204,12 +203,7 @@ class System:
                         break
                     if line == "1":
                         name, last_name = user.get_account(username, password)
-                        name = "Diane"
-                        last_name = "Cruz Mengana"
-                        # CONECTO A LA BASE DE DATOS Y HALLO LA FILA QUE TIENE (SI EXISTE) <username> y <password>
-                        # RECOJO DE LA INSTANCIA <name> y <last_name>
-                        if name and last_name: # En realidad la condicion es que el <username> y <password> esten en la BD
-                            # SE CONECTA AL SERVIDOR: lo escog o se le asigna??????
+                        if name and last_name:
                             while True:
                                 self.show_profile(name, last_name)
                                 line = input(line_char)
@@ -239,7 +233,7 @@ class System:
                                             break
                                         while line == "1":
                                             print("Fecha final:")
-                                            print("formato: <Y/M/D-HH:MM> - 24 Horas")
+                                            print("formato: <Y-M-D HH:MM> - 24 Horas")
                                             date_end = input(line_char)
                                             if date_end == "": continue
                                             elif date_end == "exit": line = "exit"
@@ -265,64 +259,148 @@ class System:
                                             else: continue
                                             break
                                         if line != "1": break
-                                        user.create_personal_event(ename, date_ini, date_end, privacity)
+                                        user.create_personal_event(user.user_key,ename, date_ini, date_end, privacity)
                                         print("Evento personal creado correctamente")
                                         time.sleep(2)
                                         break
-                                if line == "2":
-                                    # print("2. Crear Grupo")
-                                    while True:
-                                        line = input(line_char)
-                                        if line == "exit": line = "exit"
-                                        if line == "home": line = "home"
-                                        if line == "back": line = "back"
+                                if line == "2":   
+                                    while line == "2":
+                                        os.system('cls')
+                                        print("<back>: regresar al perfil")
+                                        print("<home>: volver a la vista principal")
+                                        print("<exit>: cerrar la aplicación")
+                                        print("")
+                                        while line == "2":
+                                            print("Nombre de grupo:")
+                                            gname = input(line_char)
+                                            if gname == "": continue
+                                            elif gname == "exit": line = "exit"
+                                            elif gname == "home": line = "home"
+                                            elif gname == "back": line = "back"
+                                            break 
+                                        while line == "2":
+                                            print("Tipo de grupo:")
+                                            print("1. Jerárquico")
+                                            print("2. No Jerárquico")
+                                            gtype = input(line_char)
+                                            if gtype == "": continue
+                                            elif gtype == "exit": line = "exit"
+                                            elif gtype == "home": line = "home"
+                                            elif gtype == "back": line = "back"
+                                            elif gtype == "1": gtype = GType.Hierarchical.value
+                                            elif gtype == "2": gtype = GType.Non_hierarchical.value
+                                            else: continue
+                                            break
+                                        if line != "2": break
+                                        user.create_group(gname, gtype)
+                                        print("Grupo creado correctamente")
+                                        time.sleep(2)
                                         break
                                 if line == "3": 
-                                    # print("3. Notificaciones")
+                                    ids,texts = user.get_notifications()
                                     while True:
-                                        notifications = None # Buscar en la BD
-                                        self.show_notification(name, last_name, notifications)
+                                        self.show_notification(name, last_name, ids, texts)
                                         line = input(line_char)
-                                        if line == "exit": line = "exit"
-                                        if line == "home": line = "home"
-                                        if line == "back": line = "back"
-                                        break
+                                        if line == "1":
+                                            while True:
+                                                os.system('cls')
+                                                print("<back>: regresar al perfil")
+                                                print("<home>: volver a la vista principal")
+                                                print("<exit>: cerrar la aplicación")
+                                                print("Escriba el ID de la notificación que desea eliminar")
+                                                line = input(line_char)
+                                                if line == "exit": line = "exit"
+                                                elif line == "home": line = "home"
+                                                elif line == "back": line = "back" 
+                                                if line == "exit" or line == "home" or line == "back": break
+                                                idn = None
+                                                try: idn = int(line)
+                                                except: continue
+                                                if idn and idn in ids: 
+                                                    user.delete_notification(idn)
+                                                    print("Notificación eliminación correctamente")
+                                                    time.sleep(2)
+                                                    line = "back"
+                                                    break
+                                        if line == "exit" or line == "home" or line == "back": break
                                 if line == "4":
-                                    # print("4. Eventos")
+                                    ids_event,event_names,dates_ini,dates_end,states,visibilities,creators,id_groups=user.get_all_events()
                                     while True:
-                                        events = None # Buscar en la BD
-                                        self.show_event(name, last_name, events)
+                                        self.show_event(name,last_name,ids_event,event_names,dates_ini,dates_end,states,visibilities,creators,id_groups)
                                         line = input(line_char)
-                                        if line == "exit": line = "exit"
-                                        if line == "home": line = "home"
-                                        if line == "back": line = "back"
-                                        break
+                                        if line == "1":
+                                            while True:
+                                                os.system('cls')
+                                                print("<back>: regresar al perfil")
+                                                print("<home>: volver a la vista principal")
+                                                print("<exit>: cerrar la aplicación")
+                                                print("Escriba el ID del evento personal o creado por usted que desea eliminar")
+                                                line = input(line_char)
+                                                if line == "exit": line = "exit"
+                                                elif line == "home": line = "home"
+                                                elif line == "back": line = "back" 
+                                                if line == "exit" or line == "home" or line == "back": break
+                                                if line in ids_event:
+                                                    index = ids_event.index(line)
+                                                    if states[index] == State.Personal.value or creators[index] == str(user.user_key):
+                                                        user.delete_event(line)
+                                                        print("Evento eliminado correctamente")
+                                                        time.sleep(2)
+                                                        line = "back"
+                                                        break
+                                                    else: print("Este evento no es personal o no es creado por usted")
+                                        elif line == "2":
+                                            while True:
+                                                os.system('cls')
+                                                print("<back>: regresar al perfil")
+                                                print("<home>: volver a la vista principal")
+                                                print("<exit>: cerrar la aplicación")
+                                                print("Escriba el ID del evento pendiente que desea aceptar")
+                                                line = input(line_char)
+                                                if line == "exit": line = "exit"
+                                                elif line == "home": line = "home"
+                                                elif line == "back": line = "back" 
+                                                if line == "exit" or line == "home" or line == "back": break
+                                                if line in ids_event:
+                                                    index = ids_event.index(line)
+                                                    if states[index] == State.Pendient.value:
+                                                        user.accept_pendient_event(line)
+                                                        print("Evento aceptado correctamente")
+                                                        time.sleep(2)
+                                                        line = "back"
+                                                        break
+                                                    else: print("Este evento no está pendiente a confirmación")
+                                        elif line == "3":
+                                            while True:
+                                                os.system('cls')
+                                                print("<back>: regresar al perfil")
+                                                print("<home>: volver a la vista principal")
+                                                print("<exit>: cerrar la aplicación")
+                                                print("Escriba el ID del evento pendiente que desea rechazar")
+                                                line = input(line_char)
+                                                if line == "exit": line = "exit"
+                                                elif line == "home": line = "home"
+                                                elif line == "back": line = "back" 
+                                                if line == "exit" or line == "home" or line == "back": break
+                                                if line in ids_event:
+                                                    index = ids_event.index(line)
+                                                    if states[index] == State.Pendient.value:
+                                                        user.decline_pendient_event(creators[index],line,id_groups[index])
+                                                        print("Evento rechazado correctamente")
+                                                        time.sleep(2)
+                                                        line = "back"
+                                                        break
+                                                    else: print("Este evento no está pendiente a confirmación")
+                                        if line == "exit" or line == "home" or line == "back": break
                                 if line == "5":
-                                    # print("5. Grupos")
+                                    ids_group,group_names,group_types,group_refs = user.get_groups_belong_to()   
                                     while True:
-                                        groups = None # Buscar en la BD
-                                        self.show_group(name, last_name, groups)
+                                        self.show_group(name, last_name, ids_group, group_names, group_types, group_refs)
                                         line = input(line_char)
                                         if line == "exit": line = "exit"
                                         if line == "home": line = "home"
                                         if line == "back": line = "back"
                                         break
-                                # if line == "6": 
-                                #     while True:
-                                #         os.system('cls')
-                                #         print("<back>: regresar al perfil")
-                                #         print("<home>: volver a la vista principal")
-                                #         print("<exit>: cerrar la aplicación")
-                                #         print("")
-                                #         print("¿Está seguro(a) de querer borrar su cuenta? (Y/N)")
-                                #         line = input(line_char)
-                                #         if line == "exit" or line == "home" or line == "back": break
-                                #         if line != "Y" and line != "N": continue
-                                #         if line == "Y":
-                                #             user.delete_account()
-                                #             line = "home"
-                                #             break
-                                #         if line == "N": break
                                 if line == "exit" or line == "home": break
                         else:
                             print("Su nombre de usuario o contraseña son incorrectas. Inténtelo de nuevo")
