@@ -31,7 +31,7 @@ class Client:
         self.user_key = hash_key(user_key)
         data = {"message": CREATE_PROFILE, "ip": "127.0.0.1", "port": "5557", "user_key": self.user_key, "user_name": user_name, "last_name": last_name, "password": password  }
         print(f"Sending CREATE_PROFILE {self.user_key} request to {str(address)}")
-        send_request(address,data,False,False)
+        send_request(address,data=data)
         time.sleep(4)
 
     def get_account(self, user_key, password,address=None):
@@ -42,7 +42,7 @@ class Client:
         if not address: address = self.server_addr
         data = {"message": CREATE_GROUP, "ip": "127.0.0.1", "port": "5557", "user_key": self.user_key, "group_name": group_name, "group_type": group_type  }
         print(f"Sending CREATE_GROUP request to {str(address)}")
-        send_request(address,data,False,False)
+        send_request(address,data=data)
         time.sleep(4)
 
     def get_notifications(self,address=None):
@@ -50,7 +50,7 @@ class Client:
         request = GET_NOTIFICATIONS
         data = {"message": request, "ip": "127.0.0.1", "port": "5557", "user_key": self.user_key, "sender_addr": self.addr  }
         print(f"Sending GET_NOTIFICATIONS request to {str(address)}")
-        send_request(address,data,False,False)
+        send_request(address,data=data)
         time.sleep(4)
         data = self.recieve_data(request) 
         return data['ids'], data['texts']
@@ -59,7 +59,7 @@ class Client:
         if not address: address = self.server_addr
         data = {"message": DELETE_NOTIFICATION, "ip": "127.0.0.1", "port": "5557", "user_key": self.user_key, "id_notification": id_notification  }
         print(f"Sending DELETE_NOTIFICATION request to {str(address)}")
-        send_request(address,data,False,False)
+        send_request(address,data=data)
         time.sleep(4)
 
     def create_personal_event(self, event_name, date_initial, date_end, privacity=Privacity.Public.value, state=State.Personal.value, id_group=None, id_creator=None, address=None):
@@ -67,7 +67,7 @@ class Client:
         data = {"message": CREATE_EVENT, "ip": "127.0.0.1", "port": "5557", "user_key": self.user_key, "event_name": event_name, 
                 "date_initial": date_initial , "date_end": date_end, "visibility": privacity, "state": state, "group":id_group, "creator":id_creator  }
         print(f"Sending CREATE_EVENT request to {str(address)}")
-        send_request(address,data,False,False)
+        send_request(address,data=data)
         time.sleep(4)
     
     def get_all_events(self,address=None):
@@ -75,7 +75,7 @@ class Client:
         request = GET_EVENTS
         data = {"message": request, "ip": "127.0.0.1", "port": "5557", "user_key": self.user_key, "sender_addr": self.addr  }
         print(f"Sending GET_EVENTS request to {str(address)}")
-        send_request(address,data,False,False)
+        send_request(address,data=data)
         time.sleep(4)
         data = self.recieve_data(request) 
         return data["ids_event"],data["event_names"],data["dates_ini"],data["dates_end"],data["states"],data["visibilities"],data["creators"],data["id_groups"]
@@ -85,7 +85,7 @@ class Client:
         request = GET_GROUPS
         data = {"message": request, "ip": "127.0.0.1", "port": "5557", "user_key": self.user_key, "sender_addr": self.addr  }
         print(f"Sending GET_GROUPS request to {str(address)}")
-        send_request(address,data,False,False)
+        send_request(address,data=data)
         time.sleep(4)
         data = self.recieve_data(request) 
         return data["ids_group"],data["group_names"],data["group_types"],data["group_refs"]
@@ -94,7 +94,7 @@ class Client:
         if not address: address = self.server_addr
         data = {"message": ACEPT_EVENT, "ip": "127.0.0.1", "port": "5557", "user_key": self.user_key, "id_event": id_event  }
         print(f"Sending ACEPT_EVENT request to {str(address)}")
-        send_request(address,data,False,False)
+        send_request(address,data=data)
         time.sleep(4)
 
     def check_account(self,user_key,address,password = None):
@@ -102,7 +102,7 @@ class Client:
         request = GET_PROFILE
         data = {"message": request, "ip": "127.0.0.1", "port": "5557", "user_key": user_key, "password": password, "sender_addr": self.addr  }
         print(f"Sending GET_PROFILE request to {str(address)}")
-        send_request(address,data,False,False)
+        send_request(address,data=data)
         time.sleep(4)
         data = self.recieve_data(request)       
         return data['user_name'], data['last_name']
@@ -123,7 +123,7 @@ class Client:
     def delete_user_event(self,id_event,user_key,address):
         data = {"message":DELETE_EVENT, "ip":"127.0.0.1", "port":"5557", "user_key":user_key, "id_evet":id_event  }
         print(f"Sending DELETE_EVENT request to {str(address)}")
-        send_request(address,data,False,False)
+        send_request(address,data=data)
         time.sleep(4)
 
     def decline_pendient_event(self, id_event,address=None):
@@ -163,7 +163,7 @@ class Client:
         request = GET_EVENT
         data = {"message": request, "ip": "127.0.0.1", "port": "5557", "user_key": self.user_key, "id_event": id_event, "sender_addr": self.addr  }
         print(f"Sending GET_EVENT request to {str(address)}")
-        send_request(address,data,False,False)
+        send_request(address,data=data)
         time.sleep(4)
         data = self.recieve_data(request) 
         return data["id_event"],data["event_name"],data["date_ini"],data["date_end"],data["states"],data["visibility"],data["creator"],data["id_group"]
