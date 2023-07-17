@@ -369,7 +369,7 @@ class ChordNode:
                 break
             elif request in self.Req_Method.keys():
                 notify_data(f"Receiving {request} from {addr}","SetData")
-                if 30 <= int(request) < 50:
+                if 30 <= int(request) < 60:
                     if not self.leader == self.nodeID: self.get_nodes()   
                     if int(request)%2 ==0 :self.update_key(data,request,addr)
                     else: 
@@ -490,7 +490,7 @@ class ChordNode:
         self.db.delete_notification(data["user_key"],data["id_notification"])
 
     def create_event(self,data):
-        self.db.create_event(data["user_key"],data["event_name"],data["date_initial"],data["date_end"],data["state"],data["visibility"],data["group"],data["creator"])
+        self.db.create_event(data["user_key"],data["id_event"],data["event_name"],data["date_initial"],data["date_end"],data["state"],data["visibility"],data["group"],data["creator"])
 
     def get_all_events(self,data):
         idevents,enames,datesc,datesf,states,visibs,creators,idgroups=self.db.get_all_events(data["user_key"])
