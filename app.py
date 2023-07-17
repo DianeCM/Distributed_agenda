@@ -159,10 +159,10 @@ class Client:
     def add_member_account(self,id_user, id_group, group_name, group_type, ref,address=None):
         pass
 
-    def get_event(self, id_event, address=None):
+    def get_event(self, user_key, id_event, address=None):
         if not address: address = self.server_addr
         request = GET_EVENT
-        data = {"message": request, "ip": "127.0.0.1", "port": "5557", "user_key": self.user_key, "id_event": id_event, "sender_addr": self.addr  }
+        data = {"message": request, "ip": "127.0.0.1", "port": "5557", "user_key": user_key, "id_event": id_event, "sender_addr": self.addr  }
         print(f"Sending GET_EVENT request to {str(address)}")
         send_request(address,data=data)
         data = self.recieve_data(request) 
