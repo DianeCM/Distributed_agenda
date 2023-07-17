@@ -70,8 +70,8 @@ class ChordNode:
     
     @property 
     def Req_Method(self):
-        return { CREATE_PROFILE: self.create_account , CREATE_GROUP: self.create_group, REP_GROUP:self.create_group, CREATE_PEVENT: self.create_personal_event, REP_PROFILE: self.create_account,
-                GET_PROFILE: self.get_account,GET_GROUPS: self.get_groups_belong_to, GET_EVENTS:self.get_all_events,REP_PEVENT: self.create_personal_event, GET_NOTIFICATIONS: self.get_notifications,
+        return { CREATE_PROFILE: self.create_account , CREATE_GROUP: self.create_group, REP_GROUP:self.create_group, CREATE_EVENT: self.create_event, REP_PROFILE: self.create_account,
+                GET_PROFILE: self.get_account,GET_GROUPS: self.get_groups_belong_to, GET_EVENTS:self.get_all_events,REP_EVENT: self.create_event, GET_NOTIFICATIONS: self.get_notifications,
                 DELETE_NOTIFICATION:self.delete_notification}
     
     @property
@@ -489,8 +489,8 @@ class ChordNode:
     def delete_notification(self,data):
         self.db.delete_notification(data["user_key"],data["id_notification"])
 
-    def create_personal_event(self,data):
-        self.db.create_personal_event(data["user_key"],data["event_name"],data["date_initial"],data["date_end"],data["visibility"])
+    def create_event(self,data):
+        self.db.create_event(data["user_key"],data["event_name"],data["date_initial"],data["date_end"],data["state"],data["visibility"],data["group"],data["creator"])
 
     def get_all_events(self,data):
         idevents,enames,datesc,datesf,states,visibs,creators,idgroups=self.db.get_all_events(data["user_key"])
