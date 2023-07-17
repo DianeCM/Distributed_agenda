@@ -145,6 +145,7 @@ class ChordNode:
                         data["nodes_ID"] = self.nodeSet                
                         data["addresses"] = self.Serialize_Address
                     json_data = json.dumps(data).encode('utf-8')
+                    notify_data("Sending JOIN_RESP","Join")
                     conn.send(json_data)
 
             #Someone wants to check if Im alive
@@ -170,7 +171,7 @@ class ChordNode:
                 notify_data(f"Sending {response} to {node}","GetData")
                 if not get_data: 
                     self.Sucessor= msg["nodeID"]
-                    self.Succ_Addr = Address(data["ip"],data["ports"][0],data["ports"][1],data["ports"][2])   
+                    self.node_address[self.Sucessor] = Address(msg["ip"],msg["port"][0],msg["port"][1],msg["port"][2])   
 
             if request == GET_NODES:
                 id = msg["nodeID"]

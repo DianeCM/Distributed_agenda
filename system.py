@@ -131,7 +131,7 @@ class System:
         print("")
 
     def start_console(self):
-        user = Client(("127.0.0.1",5557),("127.0.0.1",int("5123")))
+        user = Client(("127.0.0.1",5557),("127.0.0.1",int("5050")))
         while True:
             self.show_home()
             line_char = "> "
