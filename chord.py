@@ -17,7 +17,7 @@ import os
 
 class ChordNode:
 
-    def __init__(self,address:Address,local = False,port2 = None,port3=None):
+    def __init__(self,address:Address,local = False):
 
         self.address=address
         self.leader = None
@@ -34,6 +34,7 @@ class ChordNode:
         self.db = DBModel(self.nodeID)
         self.nBits = 160
         self.Sucessor = None
+        
        
         #Initializing Finger Table
         self.FT = [None for i in range(self.nBits+1)]
@@ -69,7 +70,7 @@ class ChordNode:
     @property
     def Predecessor(self):
         return self.FT[0]
-    
+
     @property 
     def Req_Method(self):
         return { CREATE_PROFILE: self.create_account , CREATE_GROUP: self.create_group, REP_GROUP:self.create_group, CREATE_EVENT: self.create_event, REP_PROFILE: self.create_account,
@@ -78,7 +79,7 @@ class ChordNode:
     
     @property
     def Serialize_Address(self):
-        return { node : (address.ip,address.ports[0],address.ports[1],address.ports[2]) for node,address in self.node_address.items()}
+        return { node : (address.ip,address.ports) for node,address in self.node_address.items()}
 
     def inbetween(self, key, lwb, upb):                                         
         if lwb <= upb:                                                            
@@ -95,12 +96,17 @@ class ChordNode:
             (lwbi,upbi) = (upbi, (upbi+1) % len(self.nodeSet)) # go to next segment
         return None                                                                
     
-    def recomputeFingerTable(self):
+    def recomputeFingerTable(self,write_to_new_suc = False):
         if len(self.nodeSet) > 1:
             self.FT[0]  = self.nodeSet[self.nodeSet.index(self.nodeID)-1] # Predecessor
             self.FT[1:] = [self.finger(i) for i in range(1,self.nBits+1)] # Sucessors
         elif len(self.nodeSet)  == 1: self.FT = [self.nodeSet[0] for i in range(1,self.nBits+1)]
-        self.Sucessor = self.FT[1]
+        if not self.Sucessor: 
+            self.Sucessor = self.FT[1] 
+            return 
+        if write_to_new_suc and not (self.Sucessor == self.nodeID) and not (self.Sucessor == self.FT[1]):
+            self.Sucessor = self.FT[1]
+            if  not (self.Sucessor == self.nodeID): self.send_data_to_sucessor()
 
         #actualizar data
 
@@ -114,7 +120,7 @@ class ChordNode:
                 return self.FT[i]                                # key in [FT[i],FT[i+1])
     
     def get_addresses(self,addresses):
-        return {int(node):Address(address[0],address[1],address[2],address[3]) for node,address in addresses.items()}
+        return {int(node):Address(address[0],address[1]) for node,address in addresses.items()}
 
 
     # INTER-NODE communication process   
@@ -141,13 +147,13 @@ class ChordNode:
                         self.nodeSet.append(newID)
                         self.nodeSet.sort()
                         self.recomputeFingerTable()
-                        self.node_address[newID] = Address(msg["ip"],msg["ports"][0],msg["ports"][1],msg["ports"][2])
+                        self.node_address[newID] = Address(msg["ip"],msg["ports"])
                         data["nodes_ID"] = self.nodeSet                
                         data["addresses"] = self.Serialize_Address
                     json_data = json.dumps(data).encode('utf-8')
                     notify_data("Sending JOIN_RESP","Join")
                     conn.send(json_data)
-
+    
             #Someone wants to check if Im alive
             if request == CHECK_REQ:
                 data = {"message": CHECK_REP,"ip": self.address.ip , "ports": self.address.ports , "nodeID": self.nodeID, "leader": self.leader, "nodes_ID":self.nodeSet, "addresses":self.Serialize_Address }
@@ -171,7 +177,8 @@ class ChordNode:
                 notify_data(f"Sending {response} to {node}","GetData")
                 if not get_data: 
                     self.Sucessor= msg["nodeID"]
-                    self.node_address[self.Sucessor] = Address(msg["ip"],msg["port"][0],msg["port"][1],msg["port"][2])   
+                    self.node_address[self.Sucessor] = Address(msg["ip"],msg["port"])
+                elif msg["pred_pred"]: self.delete_rep_data(msg)  
 
             if request == GET_NODES:
                 id = msg["nodeID"]
@@ -186,24 +193,31 @@ class ChordNode:
                 notify_data(f'Recieving SET_LEADER request from {id}',"Check")
                 addresses,self.nodeSet = self.discover_nodes(True)
                 self.node_address = self.get_addresses(addresses) 
-                self.recomputeFingerTable()
+                self.recomputeFingerTable(write_to_new_suc = True)
 
             if request == CHECK_SUC:
                 id = msg["nodeID"]
                 notify_data(f'Recieving CHECK_SUC request from {id}',"Check")
                 data = {"message": CHECK_SUC_RESP,"ip": self.address.ip , "ports": self.address.ports , "nodeID": self.nodeID, "leader": self.leader }
-                notify_data(f'Sending CHECK_SUC_RESP request from {id}',"Check")
+                notify_data(f'Sending CHECK_SUC_RESP request to {id}',"Check")
                 json_data = json.dumps(data).encode('utf-8')
                 conn.send(json_data)
 
 
- 
     def index_data(self,get_data,msg=None):
-        start_index = self.Predecessor  if not get_data else msg["startID"]
+        start_index = self.Predecessor
+        if msg:  start_index = msg["pred_pred"] if not get_data else msg["startID"]
         end_index =   self.nodeID  if not get_data else msg["nodeID"] 
         print(start_index,end_index)
         condition = lambda id : self.inbetween(int(id),start_index,end_index)
         self.db.get_filtered_db(condition,'copia.db')
+
+    def delete_rep_data(self,msg):
+        start_index = msg["pred_pred"]
+        end_index =  msg["startID"]
+        print(start_index,end_index)
+        condition = lambda id : self.inbetween(int(id),start_index,end_index)
+        self.db.delete_replicated_db(condition)
 
     def recieve_files(self):
         while True:          
@@ -223,7 +237,8 @@ class ChordNode:
                 self.nodeSet = data["nodeSet"]
                 notify_data(f"Upadating node set :{self.nodeSet}","GetData")
                 self.node_address = self.get_addresses(data["addresses"])
-                self.recomputeFingerTable()
+                print(self.node_address)
+                self.recomputeFingerTable(write_to_new_suc = True)
               else:
                 msg = data["message"]
                 notify_data(f"Not expected {msg} !!!!!!!!!!!!!!!!","Error")
@@ -232,7 +247,7 @@ class ChordNode:
                 #building node_address dict
                 self.node_address = self.get_addresses(addresses)       
                 #Computing Finger Table
-                self.recomputeFingerTable()
+                self.recomputeFingerTable(write_to_new_suc = True)
 
     def check_sucessor(self):
         while True:
@@ -244,17 +259,15 @@ class ChordNode:
             data = send_request(address,data=data,answer_requiered=True)
             notify_data(f'Recieving CHECK_SUC_RESP response' ,"Check")
             if not data:
-                last_Sucessor = self.Sucessor
-                if not self.leader == self.nodeID: 
-                  self.get_nodes()  
-                  notify_data(f"New sucessor found {self.Sucessor}","Join")
-                  if not last_Sucessor == self.Sucessor:
-                    address = (self.node_address[self.Sucessor].ip,int(self.node_address[self.Sucessor].ports[2]))
-                    self.index_data(False)
-                    send_request(address,num_bytes=5120)
-                    notify_data(f"Sending REP_DATA to {self.Sucessor}","GetData")
+                if not self.leader == self.nodeID: self.get_nodes()  
+        
+    def send_data_to_sucessor(self):
+        notify_data(f"New sucessor found {self.Sucessor}","Join")
+        address = (self.node_address[self.Sucessor].ip,int(self.node_address[self.Sucessor].ports[2]))
+        self.index_data(False)
+        send_request(address,num_bytes=5120)
+        notify_data(f"Sending REP_DATA to {self.Sucessor}","GetData")       
 
-                        
     # JOIN process
     def join(self):
 
@@ -284,7 +297,7 @@ class ChordNode:
         current_leader = self.nodeID
         leader_address = self.address
         discovered_nodes = [self.nodeID]
-        discovered_addresses = {self.nodeID:(self.address.ip,self.address.ports[0],self.address.ports[1],self.address.ports[2])}
+        discovered_addresses = {self.nodeID:(self.address.ip,self.address.ports)}
         msg_to_send = CHECK_REQ if find_leader else JOIN_REQ
         msg_to_rcv  = CHECK_REP if find_leader else JOIN_REP
         for address in self.possible_addresses:
@@ -297,7 +310,7 @@ class ChordNode:
                     leader = data["leader"]
                     ip = data["ip"]
                     ports = data["ports"]
-                    discovered_addresses[current_id] = (ip,ports[0],ports[1],ports[2])
+                    discovered_addresses[current_id] = (ip,ports)
                     discovered_nodes.append(current_id)
 
                     notify_data(f'Node {current_id} discovered',"Join")
@@ -309,7 +322,7 @@ class ChordNode:
                 
                     elif current_id > current_leader:
                         current_leader = current_id
-                        leader_address = Address(ip,ports[0],ports[1],ports[2])
+                        leader_address = Address(ip,ports)
                                    
         if current_leader == self.nodeID:
                 notify_data('Setting myself as leader',"Join")
@@ -335,10 +348,16 @@ class ChordNode:
         update_method = self.initialize_data if get_data else self.db.replicate_db
         
         notify_data(f"Connecting to {receiver} : node {node}","GetData")
+        my_index = self.nodeSet.index(self.nodeID)
+        #predecessor_of_predecessor_index = len(self.nodeSet)-(2-my_index) if my_index<2 else my_index - 2
 
         address = (self.node_address[node].ip,int(self.node_address[node].ports[1]))
         data = {"message": request, "ip": self.address.ip , "port": self.address.ports, "nodeID": self.nodeID}
-        if get_data: data["startID"] = self.Predecessor
+        if get_data: 
+            data["startID"] = self.Predecessor
+        data["pred_pred"] = self.nodeSet[my_index-2] if len(self.nodeSet) > 2 else None
+        #else: data["pred"] = self.Predecessor
+        
         successfull = send_request(address,data=data,answer_requiered=True,expected_zip_file=True,num_bytes=5120)
         #falta comprobar que llego el mensaje completo !!!!!!!!!!!!!!!!!!
         if successfull:
@@ -360,7 +379,7 @@ class ChordNode:
                 self.node_address = self.get_addresses(addresses)
                 self.nodeSet = new_nodes
                 notify_data(f"New nodes {self.node_address}","Join")
-                self.recomputeFingerTable()
+                self.recomputeFingerTable(write_to_new_suc = True)
             else: 
                 notify_data(f"Nodes set already update","Check")
                 notify_data(f"Nodes {self.node_address}","Join")
@@ -370,7 +389,7 @@ class ChordNode:
 
     def check_network(self):
         discovered_nodes = [self.nodeID]
-        discovered_addresses = {self.nodeID:(self.address.ip,self.address.ports[0],self.address.ports[1],self.address.ports[2])}
+        discovered_addresses = {self.nodeID:(self.address.ip,self.address.ports)}
         
         for address in self.possible_addresses:
             #print(f'Connecting to {address} to check if node is alive') 
@@ -382,7 +401,7 @@ class ChordNode:
                     leader = data["leader"]
                     ip = data["ip"]
                     ports = data["ports"]
-                    discovered_addresses[current_id] = (ip,ports[0],ports[1],ports[2])
+                    discovered_addresses[current_id] = (ip,ports)
                     discovered_nodes.append(current_id)
 
                     notify_data(f"Check response received from {current_id}","Check")
@@ -511,13 +530,11 @@ class ChordNode:
         response = str(int(data["message"])+1)
         user_name,last_name=self.db.get_account(data["user_key"],data["password"])
         resp_data = {"message": str(response),'user_name':user_name,'last_name':last_name}
-        if  user_name and last_name:
-            resp_data["ip"] = data["ip"] 
-            resp_data["port"] = data["port"] 
-            resp_data["sender_addr"] = data["sender_addr"]
-            return resp_data
-        else:
-            notify_data("This account doesn't exist","Error")
+        if not user_name: notify_data("This account doesn't exist","Error")
+        resp_data["ip"] = data["ip"] 
+        resp_data["port"] = data["port"] 
+        resp_data["sender_addr"] = data["sender_addr"]
+        return resp_data
     
     def create_group(self,data):
         self.db.create_group(data["user_key"],data["group_name"],data["group_type"])

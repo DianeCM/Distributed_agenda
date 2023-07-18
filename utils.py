@@ -13,13 +13,17 @@ def hash_key(key: str) -> int:
     hash_value = int(sha1.hexdigest(), 16) # convierte el hash SHA-1 en un número entero
     return hash_value
 
-class Address(object):
-		def __init__(self,ip,port1,port2,port3):
-			self.ip=ip
-			self.ports = (port1,port2,port3)
-			
-		def __str__(self):
-			return f"tcp://{self.ip}:{self.ports[0]}"
+
+class Address():
+    def __init__(self,ip,ports):
+        self.ip = ip
+        self.ports = ports
+
+    def __str__(self):
+        return f"tcp:{self.ip}:{self.ports[0]}"
+    
+    def __repr__(self):
+        return f"ip:{self.ip} ports:{self.ports}"
 	
 def send_request(address,data=None,answer_requiered=False,expected_zip_file=False,num_bytes=1024):     
             sender = socket.socket(socket.AF_INET, socket.SOCK_STREAM)

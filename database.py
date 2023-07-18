@@ -315,7 +315,6 @@ class DBModel:
         notif.save()
 
 
-
     # PARA REPLICACION DE CHORD NO TOCAR
     def filter_function(self,condition,cls):
             def cond(row):
@@ -324,21 +323,6 @@ class DBModel:
             return cond 
     
     def get_filtered_db(self,condition,new_db_name):
-
-        """ registers = {}
-        for cls in self.classes:
-            cls._meta.database = self.database
-            if lwb <= upb:
-                if not cls == Group:
-                    registers[cls] = cls.select().where((lwb <= cls.user) & (cls.user < upb ))      
-                else: 
-                    registers[cls] = cls.select().where((lwb <= cls.creator) & (cls.creator < upb ))                                                         
-            else:                                                                                                        
-                if not cls == Group:
-                    registers[cls] = cls.select().where(((lwb <= cls.user) & (cls.user < upb + MAXPROC)) | ((lwb <= cls.user + MAXPROC) & (cls.user < upb)))
-                else: 
-                    registers[cls] = cls.select().where(((lwb <= cls.creator) & (cls.creator < upb + MAXPROC)) | ((lwb <= cls.creator + MAXPROC) & (cls.creator < upb)))
-            """
         registers = {}
         for cls in self.classes:
             cls._meta.database = self.database
@@ -411,3 +395,19 @@ class DBModel:
         notify_data("Events","GetData")  
         for reg in registers[5]:
                 print(reg.user,reg.event,reg.ename,reg.datec,reg.datef,reg.state,reg.visib,reg.creator,reg.group)  
+
+    def delete_replicated_db(self,condition):
+        registers = {}
+        for cls in self.classes:
+            cls._meta.database = self.database
+            registers = cls.select()
+            for origen_row in registers:
+                if ((not (cls == Group)) and condition(origen_row.user)) or ((cls == Group) and condition(origen_row.creator)):
+                        origen_row.delete_instance()
+
+        notify_data("Replicated data deleted.",'database')      
+        notify_data("Current Data",'database')              
+        reg = Account.select()
+        for r in reg:
+            print(r.name)
+       
