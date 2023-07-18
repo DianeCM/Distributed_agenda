@@ -9,27 +9,27 @@ En este informe, se describirán las principales características y componentes 
 
 La agenda distribuida desarrollada consta de varios componentes clave para garantizar su eficiencia y estabilidad. Los componentes principales incluyen la red Chord, la replicación 1 a 1, la tolerancia de fallas y las técnicas para la consistencia de datos.
 
-- $\textbf{\underline{Red Chord}}$
+- **<ins> Red Chord </ins>**
 
     La red Chord es un protocolo de enrutamiento que permite la creación de una red de nodos distribuidos en la cual cada nodo es responsable de un rango de claves, tiene una estructura de anillo en donde se distribuye la base de datos en varias máquinas. Cada máquina en la red Chord se encarga de una parte específica de la base de datos y se comunica con su sucesor en el anillo para garantizar la coherencia de los datos. La red Chord se utiliza en la agenda distribuida para garantizar que los datos estén disponibles en todas las máquinas de la red y que se puedan buscar y actualizar de manera eficiente. Cada nodo mantiene una tabla de enrutamiento que le permite encontrar el nodo responsable de cualquier clave en la red en tiempo logarítmico. 
 
-- $\textbf{\underline{Replicación 1 a 1}}$
+- **<ins> Replicación 1 a 1 </ins>**
  
     La replicación 1 a 1 se utiliza en la agenda distribuida para garantizar que cada dato tenga una copia de respaldo en otra máquina de la red. Esto se hace para garantizar que si una máquina falla, otra pueda tomar su lugar y mantener la disponibilidad de la agenda, los datos todavía estarán disponibles en otra máquina. Además, la replicación 1 a 1 también ayuda a mejorar la eficiencia de la base de datos, ya que las consultas se pueden distribuir entre varias máquinas.
 
-- $\textbf{\underline{Tolerancia a fallos}}$
+- **<ins> Tolerancia a fallos </ins>**
 
     La tolerancia a fallos es la capacidad del sistema para continuar funcionando incluso si algunos de sus componentes fallan. En nuestro proyecto, implementamos técnicas para garantizar la tolerancia a fallos de la agenda distribuida. Utilizamos la replicación 1 a 1 y técnicas de detección y recuperación de fallos para garantizar que la agenda esté disponible incluso si algunos nodos fallan.
 
-- $\textbf{\underline{Consistencia de datos}}$
+- **<ins> Consistencia de datos </ins>**
 
     La consistencia de datos se refiere a la necesidad de que los datos en la base de datos sean consistentes en todo momento. En nuestro proyecto, analizamos varias formas de implementar algunas de las técnicas que garantizan la consistencia de datos en un sistema distribuido, así como, técnicas de sincronización de datos para garantizar que los datos sean consistentes en todos los nodos de la red y mitiguen errores que puedan surgir: incluyen la propagación de actualizaciones en la red y la resolución de conflictos.
 
-- $\textbf{\underline{SQLite3}}$
+- **<ins> SQLite3 </ins>**
 
     Para la gestión de la base de datos y consultas, utilizamos SQLite3: es una biblioteca de software que proporciona una base de datos relacional incorporada en la aplicación. Es fácil de usar y proporciona una gestión eficiente de la base de datos, lo que lo convierte en una buena opción para nuestros propósitos.
 
-- $\textbf{\underline{Consola interactiva}}$
+- **<ins> Consola interactiva </ins>**
 
     Para la interacción usuario-servidor, implementamos una consola interactiva con algunos comandos especiales. Los usuarios pueden interactuar con la agenda distribuida mediante comandos específicos, como agregar eventos personales, grupales, gestionar grupos jerárquicos, etc. La consola interactiva proporciona una forma fácil e intuitiva de interactuar con la agenda distribuida.
 
