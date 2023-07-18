@@ -1,15 +1,19 @@
 import os
+import platform
 from app import *
 
 # TASKS (MIOS NO LOS BORRES PLIS):
 # MOSTRAR ASIGNACION DE ROL Y LEVEL PARA ANNADIR MIEMBROS SI ES JERARQUICO
-# ELIMINAR EVENTOS COMPROBANDO CREADOR OR PERSONAL
-# DECLINAR EVENTOS COMPROBANDO QUE ESTAN EN PENDIENTES
-# CREAR CUENTA CON USUARIO UNICO SI NO, NOTIFCARLO
 
 class System:
+    operative_system = platform.system()
+    def console_cleaned(self):
+        if self.operative_system == 'Windows': os.system('cls')
+        elif self.operative_system == 'Linux': os.system('clear')
+        else: os.system('clear')
+
     def show_home(self):
-        os.system('clear')
+        self.console_cleaned()
         print("********************************************************************************************************")
         print("*                                                                                                      *")
         print("*                                     Bienvenido a Diagenda                                            *")
@@ -22,7 +26,7 @@ class System:
         print("<exit>: cerrar la aplicación")
 
     def show_profile(self, name, last_name):
-        os.system('clear')
+        self.console_cleaned()
         print("********************************************************************************************************")
         print("*                                                                                                      *")
         print("*                                        Perfil de Usuario                                             *")
@@ -41,7 +45,7 @@ class System:
         print("<exit>: cerrar la aplicación")
 
     def show_notification(self, name, last_name, ids, texts):
-        os.system('clear')
+        self.console_cleaned()
         print("*******************************************************************************************************")
         print("*                                                                                                     *")
         print("*                                         Notificaciones                                              *")
@@ -61,7 +65,7 @@ class System:
         print("")
 
     def show_event(self, name, last_name, ids_event, event_names, dates_ini, dates_end, states , visibilities, creators, id_groups):
-        os.system('clear')
+        self.console_cleaned()
         print("*******************************************************************************************************")
         print("*                                                                                                     *")
         print("*                                             Eventos                                                 *")
@@ -71,7 +75,7 @@ class System:
         print(f"Apellidos: {last_name}")
         print("")
         for i,ename in enumerate(event_names):
-            print(f"{ids_event[i]} {ename[i]} {dates_ini[i]} {dates_end[i]} {states[i]} {visibilities[i]} {creators[i]} {id_groups[i]}")
+            print(f"{ids_event[i]} {ename} {dates_ini[i]} {dates_end[i]} {states[i]} {visibilities[i]} {creators[i]} {id_groups[i]}")
         print("")
         print("<back>: regresar al perfil")
         print("<home>: volver a la vista principal")
@@ -82,8 +86,8 @@ class System:
         print("3. Rechazar evento (pendiente) <idevent>")
         print("")
 
-    def show_group(self, name, last_name, groups):
-        os.system('clear')
+    def show_group(self, name, last_name, ids_group, group_names, group_types, group_refs):
+        self.console_cleaned()
         print("******************************************************************************************************")
         print("*                                                                                                    *")
         print("*                                             Grupos                                                 *")
@@ -92,8 +96,8 @@ class System:
         print(f"Nombre: {name}")
         print(f"Apellidos: {last_name}")
         print("")
-        for (notif,text) in groups:
-            print(f"{notif} {text}")
+        for i,ids in enumerate(ids_group):
+            print(f"{ids} {group_names[i]} {group_types[i]} {group_refs[i]}")
         print("")
         print("<back>: regresar al perfil")
         print("<home>: volver a la vista principal")
@@ -105,7 +109,7 @@ class System:
         print("")
 
     def show_member(self, name, last_name, creator, gname, members):
-        os.system('clear')
+        self.console_cleaned()
         print("******************************************************************************************************")
         print("*                                                                                                    *")
         print("*                            Miembros Jerárquicamente Inferiores                                     *")
@@ -134,7 +138,7 @@ class System:
             line = input(line_char)
             if line == "2":
                 while line == "2":
-                    os.system('clear')
+                    self.console_cleaned()
                     print("<home>: volver a la vista principal")
                     print("<exit>: cerrar la aplicación")
                     print("")
@@ -183,7 +187,7 @@ class System:
                         time.sleep(2)
             elif line == "1":
                 while line == "1":
-                    os.system('clear')
+                    self.console_cleaned()
                     print("<home>: volver a la vista principal")
                     print("<exit>: cerrar la aplicación")
                     print("")
@@ -209,7 +213,7 @@ class System:
                                 line = input(line_char)
                                 if line == "1": 
                                     while line == "1":
-                                        os.system('clear')
+                                        self.console_cleaned()
                                         print("<back>: regresar al perfil")
                                         print("<home>: volver a la vista principal")
                                         print("<exit>: cerrar la aplicación")
@@ -265,7 +269,7 @@ class System:
                                         break
                                 if line == "2":   
                                     while line == "2":
-                                        os.system('clear')
+                                        self.console_cleaned()
                                         print("<back>: regresar al perfil")
                                         print("<home>: volver a la vista principal")
                                         print("<exit>: cerrar la aplicación")
@@ -303,7 +307,7 @@ class System:
                                         line = input(line_char)
                                         if line == "1":
                                             while True:
-                                                os.system('clear')
+                                                self.console_cleaned()
                                                 print("<back>: regresar al perfil")
                                                 print("<home>: volver a la vista principal")
                                                 print("<exit>: cerrar la aplicación")
@@ -330,7 +334,7 @@ class System:
                                         line = input(line_char)
                                         if line == "1":
                                             while True:
-                                                os.system('clear')
+                                                self.console_cleaned()
                                                 print("<back>: regresar al perfil")
                                                 print("<home>: volver a la vista principal")
                                                 print("<exit>: cerrar la aplicación")
@@ -351,7 +355,7 @@ class System:
                                                     else: print("Este evento no es personal o no es creado por usted")
                                         elif line == "2":
                                             while True:
-                                                os.system('clear')
+                                                self.console_cleaned()
                                                 print("<back>: regresar al perfil")
                                                 print("<home>: volver a la vista principal")
                                                 print("<exit>: cerrar la aplicación")
@@ -372,7 +376,7 @@ class System:
                                                     else: print("Este evento no está pendiente a confirmación")
                                         elif line == "3":
                                             while True:
-                                                os.system('clear')
+                                                self.console_cleaned()
                                                 print("<back>: regresar al perfil")
                                                 print("<home>: volver a la vista principal")
                                                 print("<exit>: cerrar la aplicación")
@@ -385,7 +389,7 @@ class System:
                                                 if line in ids_event:
                                                     index = ids_event.index(line)
                                                     if states[index] == State.Pendient.value:
-                                                        user.decline_pendient_event(creators[index],line,id_groups[index])
+                                                        user.decline_pendient_event(line)
                                                         print("Evento rechazado correctamente")
                                                         time.sleep(2)
                                                         line = "back"
@@ -395,6 +399,10 @@ class System:
                                 if line == "5":
                                     ids_group,group_names,group_types,group_refs = user.get_groups_belong_to()   
                                     while True:
+                                        
+                                        print("1. Crear evento grupal <idgroup>")
+                                        print("2. Agregar miembros (grupo creado/usuario existente) <idgroup> <iduser>")
+                                        print("3. Solicitar miembros jerárquicamente inferior <idgroup>")
                                         self.show_group(name, last_name, ids_group, group_names, group_types, group_refs)
                                         line = input(line_char)
                                         if line == "exit": line = "exit"
