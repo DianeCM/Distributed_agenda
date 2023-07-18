@@ -8,7 +8,7 @@ from app import *
 class System:
     operative_system = platform.system()
     def console_cleaned(self):
-        if self.operative_system == 'Windows': self.console_cleaned()
+        if self.operative_system == 'Windows': os.system('cls')
         elif self.operative_system == 'Linux': os.system('clear')
         else: os.system('clear')
 
