@@ -29,9 +29,14 @@ class Client:
     def create_account(self, user_key, user_name, last_name, password,address=None):
         if not address: address = self.server_addr
         self.user_key = hash_key(user_key)
-        data = {"message": CREATE_PROFILE, "ip": "127.0.0.1", "port": "5557", "user_key": self.user_key, "user_name": user_name, "last_name": last_name, "password": password  }
-        print(f"Sending CREATE_PROFILE {self.user_key} request to {str(address)}")
-        send_request(address,data=data)
+        name, last = self.check_account(self.user_key,address)
+        if not name:
+            data = {"message": CREATE_PROFILE, "ip": "127.0.0.1", "port": "5557", "user_key": self.user_key, "user_name": user_name, "last_name": last_name, "password": password  }
+            print(f"Sending CREATE_PROFILE {self.user_key} request to {str(address)}")
+            send_request(address,data=data)
+            return True
+        return False
+        
 
     def get_account(self, user_key, password,address=None):
         self.user_key = hash_key(user_key)
