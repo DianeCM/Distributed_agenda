@@ -39,7 +39,12 @@ class Client:
     
     def create_group(self, group_name, group_type,address=None):
         if not address: address = self.server_addr
-        data = {"message": CREATE_GROUP, "ip": "127.0.0.1", "port": "5557", "user_key": self.user_key, "group_name": group_name, "group_type": group_type  }
+        _,_,_,_,sizes = self.get_groups_belong_to(address)
+        total = max(sizes) + 1 if len(sizes) > 0 else 1
+        user = self.user_key
+        idcurrent = hash_key(f'{user}_{total}')
+        id_group = str(idcurrent)
+        data = {"message": CREATE_GROUP, "ip": "127.0.0.1", "port": "5557", "user_key": self.user_key, "id_group": id_group, "group_name": group_name, "group_type": group_type, "size": total   }
         print(f"Sending CREATE_GROUP request to {str(address)}")
         send_request(address,data=data)
 
@@ -60,20 +65,21 @@ class Client:
 
     def create_personal_event(self, user_key, event_name, date_initial, date_end, privacity=Privacity.Public.value, state=State.Personal.value, id_group=None, id_creator=None, address=None):
         if not address: address = self.server_addr
-        ids,_,_,_,_,_,_,_ = self.get_all_events(address)
-        total = len(ids)
+        _,_,_,_,_,_,_,_,sizes = self.get_all_events(user_key,address)
+        total = max(sizes) + 1 if len(sizes) > 0 else 1
         user = user_key
         idcurrent = hash_key(f'{user}_{total}')
         id_event = str(idcurrent)
         data = {"message": CREATE_EVENT, "ip": "127.0.0.1", "port": "5557", "user_key": user_key, "id_event" : id_event, "event_name": event_name, 
-                "date_initial": date_initial , "date_end": date_end, "visibility": privacity, "state": state, "group":id_group, "creator":id_creator  }
+                "date_initial": date_initial , "date_end": date_end, "visibility": privacity, "state": state, "group":id_group, "creator":id_creator, "size": total  }
         print(f"Sending CREATE_EVENT request to {str(address)}")
         send_request(address,data=data)
     
-    def get_all_events(self,address=None):
+    def get_all_events(self,user_key=None,address=None):
         if not address: address = self.server_addr
         request = GET_EVENTS
-        data = {"message": request, "ip": "127.0.0.1", "port": "5557", "user_key": self.user_key, "sender_addr": self.addr  }
+        userkey = user_key if user_key else self.user_key
+        data = {"message": request, "ip": "127.0.0.1", "port": "5557", "user_key": userkey, "sender_addr": self.addr  }
         print(f"Sending GET_EVENTS request to {str(address)}")
         send_request(address,data=data)
         data = self.recieve_data(request) 
@@ -180,7 +186,7 @@ class Client:
         # EN EL GRUPO SOLICITAR MIEMBROS INFERIORES AL ROL DEL USUARIO
         if not address: address = self.server_addr
         request = GET_HIERARCHICAL_MEMBERS
-        pass
+        return []
 
     def get_equal_members(self, id_creator, id_group,address=None):
         # IR A LA BASE DE DATOS DEL CREADOR DEL GRUPO
