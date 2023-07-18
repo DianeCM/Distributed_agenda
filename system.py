@@ -2,9 +2,6 @@ import os
 import platform
 from app import *
 
-# TASKS (MIOS NO LOS BORRES PLIS):
-# MOSTRAR ASIGNACION DE ROL Y LEVEL PARA ANNADIR MIEMBROS SI ES JERARQUICO
-
 class System:
     operative_system = platform.system()
     def console_cleaned(self):
@@ -64,27 +61,36 @@ class System:
         print("1. Eliminar notificación <id>")
         print("")
 
-    def show_event(self, name, last_name, ids_event, event_names, dates_ini, dates_end, states , visibilities, creators, id_groups):
+    def show_event(self, userkey, name, last_name, ids_event, event_names, dates_ini, dates_end, states , visibilities, creators, member=None):
         self.console_cleaned()
         print("*******************************************************************************************************")
         print("*                                                                                                     *")
-        print("*                                             Eventos                                                 *")
+        if member is None: print("*                                             Eventos                                                 *")
+        else: print("*                                        Eventos de Miembro                                           *")
         print("*                                                                                                     *")
         print("*******************************************************************************************************")
-        print(f"Nombre: {name}")
-        print(f"Apellidos: {last_name}")
-        print("")
-        for i,ename in enumerate(event_names):
-            print(f"{ids_event[i]} {ename} {dates_ini[i]} {dates_end[i]} {states[i]} {visibilities[i]} {creators[i]} {id_groups[i]}")
+        if member is None:
+            print(f"Nombre: {name}")
+            print(f"Apellidos: {last_name}")
+            print("")
+            for i,ename in enumerate(event_names):
+                if str(creators[i]) == str(userkey): print(f"{ids_event[i]} {ename} {dates_ini[i]} {dates_end[i]} {states[i]} {visibilities[i]} Creador")
+                else: print(f"{ids_event[i]} {ename} {dates_ini[i]} {dates_end[i]} {states[i]} {visibilities[i]}")
+        else:
+            print(f"Miembro ID: {member}")
+            print("")
+            for i,ename in enumerate(event_names):
+                print(f"{ename} {dates_ini[i]} {dates_end[i]} {states[i]}")     
         print("")
         print("<back>: regresar al perfil")
         print("<home>: volver a la vista principal")
         print("<exit>: cerrar la aplicación")
-        print("")
-        print("1. Eliminar evento (personal o creado) <idevent>")
-        print("2. Aceptar evento (pendiente) <idevent>")
-        print("3. Rechazar evento (pendiente) <idevent>")
-        print("")
+        if member is None:
+            print("")
+            print("1. Eliminar evento (personal o creado) <idevent>")
+            print("2. Aceptar evento (pendiente) <idevent>")
+            print("3. Rechazar evento (pendiente) <idevent>")
+            print("")
 
     def show_group(self, name, last_name, ids_group, group_names, group_types, group_refs):
         self.console_cleaned()
@@ -104,7 +110,7 @@ class System:
         print("<exit>: cerrar la aplicación")
         print("")
         print("1. Crear evento grupal <idgroup>")
-        print("2. Agregar miembros (grupo creado/usuario existente) <idgroup> <iduser>")
+        print("2. Agregar miembros (grupo creado/usuario existente) <idgroup>")
         print("3. Solicitar miembros jerárquicamente inferior <idgroup>")
         print("")
 
@@ -117,17 +123,17 @@ class System:
         print("******************************************************************************************************")
         print(f"Nombre: {name}")
         print(f"Apellidos: {last_name}")
-        print(f"Creador: {creator}")
-        print(f"Nombre de Grupo:{gname}")
+        print(f"Creador ID: {creator}")
+        print(f"Nombre de Grupo: {gname}")
         print("")
-        for (notif,text) in members:
-            print(f"{notif} {text}")
+        for id_member in members:
+            print(f"{id_member}")
         print("")
         print("<back>: regresar al perfil")
         print("<home>: volver a la vista principal")
         print("<exit>: cerrar la aplicación")
         print("")
-        print("1. Solicitar eventos de miembro <idmember>")
+        print("1. Solicitar eventos de miembro (respetando su privacidad) <idmember>")
         print("")
 
     def start_console(self):
@@ -179,9 +185,12 @@ class System:
                         break
                     if line != "2": break
                     if password == password2:
-                        user.create_account(username,name,last_name,password)
+                        boolean = user.create_account(username,name,last_name,password)
                         time.sleep(2)
                         line = "home"
+                        if boolean == False:
+                            print("Nombre de usuario existente")
+                            time.sleep(2) 
                     else: 
                         print("No coinciden las contraseñas. Inténtelo de nuevo")
                         time.sleep(2)
@@ -263,8 +272,7 @@ class System:
                                             else: continue
                                             break
                                         if line != "1": break
-                                        user.create_personal_event(user.user_key,ename, date_ini, date_end, privacity)
-                                        print("Evento personal creado correctamente")
+                                        user.create_personal_event(user.user_key,ename,date_ini,date_end,privacity)
                                         time.sleep(2)
                                         break
                                 if line == "2":   
@@ -297,7 +305,6 @@ class System:
                                             break
                                         if line != "2": break
                                         user.create_group(gname, gtype)
-                                        print("Grupo creado correctamente")
                                         time.sleep(2)
                                         break
                                 if line == "3": 
@@ -305,110 +312,175 @@ class System:
                                     while True:
                                         self.show_notification(name, last_name, ids, texts)
                                         line = input(line_char)
-                                        if line == "1":
-                                            while True:
-                                                self.console_cleaned()
-                                                print("<back>: regresar al perfil")
-                                                print("<home>: volver a la vista principal")
-                                                print("<exit>: cerrar la aplicación")
-                                                print("Escriba el ID de la notificación que desea eliminar")
-                                                line = input(line_char)
-                                                if line == "exit": line = "exit"
-                                                elif line == "home": line = "home"
-                                                elif line == "back": line = "back" 
-                                                if line == "exit" or line == "home" or line == "back": break
-                                                idn = None
-                                                try: idn = int(line)
-                                                except: continue
-                                                if idn and idn in ids: 
-                                                    user.delete_notification(idn)
-                                                    print("Notificación eliminación correctamente")
-                                                    time.sleep(2)
-                                                    line = "back"
-                                                    break
+                                        lines = line.split(" ",1)
+                                        line = lines[0]
+                                        idnotif = lines[1] if len(lines) > 1 else None
+                                        if line == "1" and idnotif:
+                                            idn = None
+                                            try: idn = int(idnotif)
+                                            except: continue
+                                            if idn and idn in ids: 
+                                                user.delete_notification(idn)
+                                                time.sleep(2)
+                                                break
                                         if line == "exit" or line == "home" or line == "back": break
                                 if line == "4":
-                                    ids_event,event_names,dates_ini,dates_end,states,visibilities,creators,id_groups=user.get_all_events()
+                                    ids_event,event_names,dates_ini,dates_end,states,visibilities,creators,id_groups,sizes=user.get_all_events()
                                     while True:
-                                        self.show_event(name,last_name,ids_event,event_names,dates_ini,dates_end,states,visibilities,creators,id_groups)
+                                        self.show_event(user.user_key,name,last_name,ids_event,event_names,dates_ini,dates_end,states,visibilities,creators)
                                         line = input(line_char)
-                                        if line == "1":
-                                            while True:
-                                                self.console_cleaned()
-                                                print("<back>: regresar al perfil")
-                                                print("<home>: volver a la vista principal")
-                                                print("<exit>: cerrar la aplicación")
-                                                print("Escriba el ID del evento personal o creado por usted que desea eliminar")
-                                                line = input(line_char)
-                                                if line == "exit": line = "exit"
-                                                elif line == "home": line = "home"
-                                                elif line == "back": line = "back" 
-                                                if line == "exit" or line == "home" or line == "back": break
-                                                if line in ids_event:
-                                                    index = ids_event.index(line)
-                                                    if states[index] == State.Personal.value or creators[index] == str(user.user_key):
-                                                        user.delete_event(line)
-                                                        print("Evento eliminado correctamente")
-                                                        time.sleep(2)
-                                                        line = "back"
-                                                        break
-                                                    else: print("Este evento no es personal o no es creado por usted")
-                                        elif line == "2":
-                                            while True:
-                                                self.console_cleaned()
-                                                print("<back>: regresar al perfil")
-                                                print("<home>: volver a la vista principal")
-                                                print("<exit>: cerrar la aplicación")
-                                                print("Escriba el ID del evento pendiente que desea aceptar")
-                                                line = input(line_char)
-                                                if line == "exit": line = "exit"
-                                                elif line == "home": line = "home"
-                                                elif line == "back": line = "back" 
-                                                if line == "exit" or line == "home" or line == "back": break
-                                                if line in ids_event:
-                                                    index = ids_event.index(line)
+                                        lines = line.split(" ",1)
+                                        line = lines[0]
+                                        idevent = lines[1] if len(lines) > 1 else None
+                                        if line == "1" and idevent:
+                                            if idevent in ids_event:
+                                                index = ids_event.index(idevent)
+                                                if states[index] == State.Personal.value or creators[index] == str(user.user_key):
+                                                    user.delete_event(idevent)
+                                                    time.sleep(2)
+                                                    break
+                                                else: 
+                                                    print("Este evento no es personal o no es creado por usted")
+                                                    time.sleep(2)
+                                        elif line == "2" and idevent:
+                                            if idevent in ids_event:
+                                                index = ids_event.index(idevent)
+                                                if states[index] == State.Pendient.value:
+                                                    user.accept_pendient_event(idevent)
+                                                    time.sleep(2)
+                                                    break
+                                                else: 
+                                                    print("Este evento no está pendiente a confirmación")
+                                                    time.sleep(2)
+                                        elif line == "3" and idevent:
+                                            if idevent in ids_event:
+                                                    index = ids_event.index(idevent)
                                                     if states[index] == State.Pendient.value:
-                                                        user.accept_pendient_event(line)
-                                                        print("Evento aceptado correctamente")
+                                                        user.decline_pendient_event(idevent)
                                                         time.sleep(2)
-                                                        line = "back"
                                                         break
-                                                    else: print("Este evento no está pendiente a confirmación")
-                                        elif line == "3":
-                                            while True:
-                                                self.console_cleaned()
-                                                print("<back>: regresar al perfil")
-                                                print("<home>: volver a la vista principal")
-                                                print("<exit>: cerrar la aplicación")
-                                                print("Escriba el ID del evento pendiente que desea rechazar")
-                                                line = input(line_char)
-                                                if line == "exit": line = "exit"
-                                                elif line == "home": line = "home"
-                                                elif line == "back": line = "back" 
-                                                if line == "exit" or line == "home" or line == "back": break
-                                                if line in ids_event:
-                                                    index = ids_event.index(line)
-                                                    if states[index] == State.Pendient.value:
-                                                        user.decline_pendient_event(line)
-                                                        print("Evento rechazado correctamente")
+                                                    else: 
+                                                        print("Este evento no está pendiente a confirmación")
                                                         time.sleep(2)
-                                                        line = "back"
-                                                        break
-                                                    else: print("Este evento no está pendiente a confirmación")
                                         if line == "exit" or line == "home" or line == "back": break
                                 if line == "5":
-                                    ids_group,group_names,group_types,group_refs = user.get_groups_belong_to()   
+                                    ids_group,group_names,group_types,group_refs,sizes = user.get_groups_belong_to()   
                                     while True:
-                                        
-                                        print("1. Crear evento grupal <idgroup>")
-                                        print("2. Agregar miembros (grupo creado/usuario existente) <idgroup> <iduser>")
-                                        print("3. Solicitar miembros jerárquicamente inferior <idgroup>")
                                         self.show_group(name, last_name, ids_group, group_names, group_types, group_refs)
                                         line = input(line_char)
-                                        if line == "exit": line = "exit"
-                                        if line == "home": line = "home"
-                                        if line == "back": line = "back"
-                                        break
+                                        lines = line.split(" ",1)
+                                        line = lines[0]
+                                        idgroup = lines[1] if len(lines) > 1 else None
+                                        if line == "1" and idgroup:
+                                            if idgroup in ids_group:
+                                                self.console_cleaned()
+                                                print("<back>: regresar al perfil")
+                                                print("<home>: volver a la vista principal")
+                                                print("<exit>: cerrar la aplicación")
+                                                print("")
+                                                while line == "1":
+                                                    print("Nombre de evento:")
+                                                    ename = input(line_char)
+                                                    if ename == "": continue
+                                                    elif ename == "exit": line = "exit"
+                                                    elif ename == "home": line = "home"
+                                                    elif ename == "back": line = "back"
+                                                    break
+                                                while line == "1":
+                                                    print("Fecha inicial:")
+                                                    print("formato: <Y-M-D HH:MM> - 24 Horas")
+                                                    date_ini = input(line_char)
+                                                    if date_ini == "": continue
+                                                    elif date_ini == "exit": line = "exit"
+                                                    elif date_ini == "home": line = "home"
+                                                    elif date_ini == "back": line = "back"
+                                                    break
+                                                while line == "1":
+                                                    print("Fecha final:")
+                                                    print("formato: <Y-M-D HH:MM> - 24 Horas")
+                                                    date_end = input(line_char)
+                                                    if date_end == "": continue
+                                                    elif date_end == "exit": line = "exit"
+                                                    elif date_end == "home": line = "home"
+                                                    elif date_end == "back": line = "back"
+                                                    break
+                                                if line != "1": break
+                                                if date_end < date_ini: 
+                                                    print("Las fechas proporcionadas son incorrectas. Inténtelo de nuevo")
+                                                    time.sleep(2)
+                                                    continue
+                                                user.create_groupal_event(ename,date_ini,date_end,idgroup)
+                                                break
+                                        elif line == "2" and idgroup:
+                                            if idgroup in ids_group:
+                                                index = ids_group.index(idgroup)
+                                                gtype = group_types[index]
+                                                gname = group_names[index]
+                                                size = sizes[index]
+                                                self.console_cleaned()
+                                                print("<back>: regresar al perfil")
+                                                print("<home>: volver a la vista principal")
+                                                print("<exit>: cerrar la aplicación")
+                                                print("")
+                                                while line == "2":
+                                                    print("Nombre de usuario que desea añadir:")
+                                                    username = input(line_char)
+                                                    if username == "": continue
+                                                    elif username == "exit": line = "exit"
+                                                    elif username == "home": line = "home"
+                                                    elif username == "back": line = "back"
+                                                    username = hash_key(username)
+                                                    break
+                                                if line != "2": break
+                                                role = None
+                                                level = None
+                                                while line == "2" and gtype == GType.Hierarchical.value:
+                                                    print("Nombre del rol que desea asignarle: (Tenga en cuenta que 'Propietario' no se puede asignar)")
+                                                    role = input(line_char)
+                                                    if role == "": continue
+                                                    elif role == "exit": line = "exit"
+                                                    elif role == "home": line = "home"
+                                                    elif role == "back": line = "back"
+                                                    break
+                                                while line == "2" and gtype == GType.Hierarchical.value:
+                                                    print("Nivel jerárquico del rol asignado: (Tenga en cuenta que si ya fue asignado previamente, este nivel no será tomado en cuenta. Si es un rol nuevo, asegúrese de establecer un valor para el nivel entre 0 y 1000)")
+                                                    level = input(line_char)
+                                                    if level == "": continue
+                                                    elif level == "exit": line = "exit"
+                                                    elif level == "home": line = "home"
+                                                    elif level == "back": line = "back"
+                                                    break
+                                                user.add_member(idgroup,username,gname,gtype,size,role,level)
+                                                break
+                                        elif line == "3" and idgroup:
+                                            if idgroup in ids_group:
+                                                index = ids_group.index(idgroup)
+                                                creator = group_refs[index]
+                                                gname = group_names[index]
+                                                gtype = group_types[index]
+                                                if gtype == GType.Hierarchical.value:
+                                                    ids_members = user.get_inferior_members(int(creator),idgroup)
+                                                    while True:
+                                                        self.show_member(name, last_name,creator,gname, ids_members)
+                                                        line = input(line_char)
+                                                        lines = line.split(" ",1)
+                                                        line = lines[0]
+                                                        id_member = lines[1] if len(lines) > 1 else None
+                                                        if line == "1" and id_member:
+                                                            if id_member in ids_members:
+                                                                ids_event,event_names,dates_ini,dates_end,states,visibilities,creators,id_groups=user.get_all_events(int(id_member))
+                                                                while True:
+                                                                    self.show_event(name,last_name,ids_event,event_names,dates_ini,dates_end,states,visibilities,creators,id_groups,id_member)
+                                                                    line = input(line_char)
+                                                                    if line == "exit" or line == "home" or line == "back": break
+                                                            else:
+                                                                print("Este miembro no pertenece a la jerarquía inferior")
+                                                                time.sleep(2)
+                                                        if line == "exit" or line == "home" or line == "back": break            
+                                                else:
+                                                    print("Se debe realizar esta solicitud en un grupo Jerárquico")
+                                                    time.sleep(2)
+                                        if line == "exit" or line == "home" or line == "back": break
                                 if line == "exit" or line == "home": break
                         else:
                             print("Su nombre de usuario o contraseña son incorrectas. Inténtelo de nuevo")
