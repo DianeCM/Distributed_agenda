@@ -232,13 +232,12 @@ class DBModel:
         except DoesNotExist: 
             print("Evento no existe")
             return
-        event.state = State.Asigned
+        event.state = State.Asigned.value
         event.save()
-        self.__add_notification(userkey, f'Ha aceptado el evento {event.name}')
+        self.__add_notification(userkey, f'Ha aceptado el evento {event.ename}')
 
-    def get_inferior_members(self, userkey:int, idgroup:str):
-        userkeyn = str(userkey)
-        member = MemberGroup.get((MemberGroup.group==idgroup) & (MemberGroup.user==userkeyn))
+    def get_inferior_members(self, userkey:str, idgroup:str):
+        member = MemberGroup.get((MemberGroup.group==idgroup) & (MemberGroup.user==userkey))
         level = member.level
         registers = MemberGroup.select().where((MemberGroup.group==idgroup) & (MemberGroup.level > level))
         ids = []
@@ -248,8 +247,8 @@ class DBModel:
             roles.append(register.role)
         return ids, roles
     
-    def get_equal_members(self, user_key:int, idgroup:str):
-        registers = MemberGroup.get((MemberGroup.group==idgroup))
+    def get_equal_members(self, idgroup:str):
+        registers = MemberGroup.select().where((MemberGroup.group==idgroup))
         ids = []
         for register in registers:
             ids.append(register.user)
