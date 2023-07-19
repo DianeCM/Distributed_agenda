@@ -138,7 +138,7 @@ class System:
         print("")
 
     def start_console(self):
-        user = Client(("127.0.0.1",5557),("127.0.0.1",int("5030")))
+        user = Client(("127.0.0.1",5557),("127.0.0.1",int("5050")))
         while True:
             self.show_home()
             line_char = "> "
@@ -481,7 +481,7 @@ class System:
                                                             if id_member in ids_members:
                                                                 ids_event,event_names,dates_ini,dates_end,states,visibilities,creators,id_groups,_=user.get_all_events(int(id_member))
                                                                 while True:
-                                                                    self.show_event(name,last_name,ids_event,event_names,dates_ini,dates_end,states,visibilities,creators,id_groups,id_member)
+                                                                    self.show_event(None,name,last_name,ids_event,event_names,dates_ini,dates_end,states,visibilities,creators,id_member)
                                                                     line = input(line_char)
                                                                     if line == "exit" or line == "home" or line == "back": break
                                                             else:
