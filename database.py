@@ -356,15 +356,28 @@ class DBModel:
         copy_db =  SqliteDatabase(db_name)
         for cls in self.classes:
             cls._meta.database = copy_db
+            #if not copy_db.table_exists([cls]):
+            #    notify_data("Aqquiiiiiiiiiiiiiii","Error")
+            #    for cls in self.classes:
+            #        cls._meta.database = self.database
+            #    copy_db.close() 
+            #    return False
             registers[cls] = cls.select()
 
         for cls in self.classes:
             cls._meta.database = self.database
             with self.database.atomic():
+               try: 
                 for row in registers[cls]:
-                    dest_row = cls.create(**row.__dict__)
-                    dest_row.save()
+                    try:
+                        dest_row = cls.create(**row.__dict__)
+                        dest_row.save()
+                    except Exception:
+                            cls.update(row.__dict__['__data__'])
+                            notify_data("Aqquiiiiiiiiiiiiiii","Error")
+               except : return False
         copy_db.close()
+        return True
 
     def check_db(self):
         registers=[]
