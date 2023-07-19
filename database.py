@@ -188,8 +188,8 @@ class DBModel:
         for register in registers:
             idevent.append(register.event)
             enames.append(register.ename)
-            datesc.append(register.datec)#.strftime('%Y-%m-%d %H:%M'))
-            datesf.append(register.datef)#.strftime('%Y-%m-%d %H:%M'))
+            datesc.append(register.datec)
+            datesf.append(register.datef)
             states.append(register.state)
             visibs.append(register.visib)
             creators.append(register.creator)
@@ -203,7 +203,7 @@ class DBModel:
         except DoesNotExist: 
             print("Usuario no existe")
             return
-        event = Event.get((Event.user == userkeyn) & Event.event == id_event)
+        event = Event.get((Event.user == userkeyn) & (Event.event == id_event))
         return event.event,event.ename,event.datec,event.datef,event.state,event.visib,event.creator,event.group,event.size
     
     def get_groups_belong_to(self, userkey: int):
@@ -236,26 +236,26 @@ class DBModel:
         event.save()
         self.__add_notification(userkey, f'Ha aceptado el evento {event.name}')
 
-    def get_inferior_members(self, idgroup:str, userkey:int):
+    def get_inferior_members(self, userkey:int, idgroup:str):
         userkeyn = str(userkey)
         member = MemberGroup.get((MemberGroup.group==idgroup) & (MemberGroup.user==userkeyn))
         level = member.level
         registers = MemberGroup.select().where((MemberGroup.group==idgroup) & (MemberGroup.level > level))
         ids = []
-        for register in registers:
-            ids.append(register.user)
-        return ids
-    
-    def get_equal_members(self, idgroup:str):
-        registers = MemberGroup.select().where(MemberGroup.group==idgroup)
-        ids = []
         roles = []
         for register in registers:
             ids.append(register.user)
             roles.append(register.role)
-        return ids,roles
+        return ids, roles
     
-    def get_group_type(self, idgroup:str, creatorkey:int):
+    def get_equal_members(self, user_key:int, idgroup:str):
+        registers = MemberGroup.get((MemberGroup.group==idgroup))
+        ids = []
+        for register in registers:
+            ids.append(register.user)
+        return ids
+    
+    def get_group_type(self, creatorkey:int, idgroup:str):
         creatorkeyn = str(creatorkey)
         try: Account.get(user=creatorkeyn)
         except DoesNotExist: 
@@ -264,10 +264,15 @@ class DBModel:
         group = Group.get((Group.group == idgroup) & (Group.creator == creatorkeyn))
         return group.gtype
     
-    def delete_event(self, idevent:bytes): ############################## TODAVIA ############
-        Event._meta.database = self.database
-        registers = Event.get((Event.idevent == idevent)&(Event.state == State.Personal))
+    def delete_event(self, userkey:int, idevent:str):
+        userkeyn = str(userkey)
+        try: Account.get(user=userkeyn)
+        except DoesNotExist: 
+            print("Usuario no existe")
+            return
+        registers = Event.get((Event.event == idevent) & (Event.user == userkeyn))
         if registers: registers.delete_instance(recursive=True)
+        else: print("Este evento no existe")
         
     def add_member_account(self, userkey:int, idgroup:str, gname:str, gtype:str, idref:str, size:int):
         userkeyn = str(userkey)

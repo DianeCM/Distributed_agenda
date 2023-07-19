@@ -74,7 +74,7 @@ class ChordNode:
     @property 
     def Req_Method(self):
         return { CREATE_PROFILE: self.create_account , CREATE_GROUP: self.create_group, REP_GROUP:self.create_group, CREATE_EVENT: self.create_event, REP_PROFILE: self.create_account,
-                GET_PROFILE: self.get_account,GET_GROUPS: self.get_groups_belong_to, GET_EVENTS:self.get_all_events,REP_EVENT: self.create_event, GET_NOTIFICATIONS: self.get_notifications,
+                GET_PROFILE: self.get_account,GET_GROUPS: self.get_groups_belong_to, GET_EVENTS:self.get_all_events,REP_EVENT: self.create_event, GET_NOTIFICATIONS: self.get_notifications,GET_EVENT:self.get_event,
                 DELETE_NOTIFICATION:self.delete_notification,DELETE_NOTIFICATION_REP:self.delete_notification, ACEPT_EVENT: self.acept_pendient_event,ACEPT_EVENT_REP:self.acept_pendient_event, DELETE_EVENT: self.delete_event}
     
     @property
@@ -537,7 +537,7 @@ class ChordNode:
         return resp_data
     
     def create_group(self,data):
-        self.db.create_group(data["user_key"],data["group_name"],data["group_type"])
+        self.db.create_group(data["user_key"],data["id_group"],data["group_name"],data["group_type"],data["size"])
     
     def get_notifications(self,data):
         ids,texts=self.db.get_notifications(data["user_key"])
@@ -551,29 +551,46 @@ class ChordNode:
         self.db.delete_notification(data["user_key"],data["id_notification"])
 
     def create_event(self,data):
-        self.db.create_event(data["user_key"],data["id_event"],data["event_name"],data["date_initial"],data["date_end"],data["state"],data["visibility"],data["group"],data["creator"])
+        self.db.create_event(data["user_key"],data["id_event"],data["event_name"],data["date_initial"],data["date_end"],data["state"],data["visibility"],data["group"],data["creator"],data["size"])
 
     def get_all_events(self,data):
-        idevents,enames,datesc,datesf,states,visibs,creators,idgroups=self.db.get_all_events(data["user_key"])
+        idevents,enames,datesc,datesf,states,visibs,creators,idgroups,sizes=self.db.get_all_events(data["user_key"],data["privacity"])
         resp_data = {"message": GET_EVENTS_RESP, "ids_event": idevents, "event_names": enames, "dates_ini": datesc, "dates_end": datesf, 
-                     "states": states, "visibilities": visibs, "creators": creators, "id_groups": idgroups  }
+                     "states": states, "visibilities": visibs, "creators": creators, "id_groups": idgroups, "sizes":sizes  }
         resp_data["ip"] = data["ip"] 
         resp_data["port"] = data["port"] 
         resp_data["sender_addr"] = data["sender_addr"]
         return resp_data
     
+    def delete_event(self,data):
+        user_key = data["user_key"] 
+        id_event = data["id_event"]
+        self.db.delete_event(user_key,id_event) 
+    
     def get_groups_belong_to(self,data):
-        idsgroup,gnames,gtypes,refs = self.db.get_groups_belong_to(data["user_key"])
-        resp_data = {"message": GET_GROUPS_RESP, "ids_group": idsgroup, "group_names": gnames, "group_types": gtypes, "group_refs": refs  }
+        idsgroup,gnames,gtypes,refs,sizes = self.db.get_groups_belong_to(data["user_key"])
+        resp_data = {"message": GET_GROUPS_RESP, "ids_group": idsgroup, "group_names": gnames, "group_types": gtypes, "group_refs": refs, "sizes":sizes  }
         resp_data["ip"] = data["ip"] 
         resp_data["port"] = data["port"] 
         resp_data["sender_addr"] = data["sender_addr"]
         return resp_data 
       
     def acept_pendient_event(self,data):
-        self.db.acept_pendient_event(data["user_key"],data["id_event"])
+        self.db.accept_pendient_event(data["user_key"],data["id_event"])
 
-    def delete_event(self,data):
-        user_key = data["user_key"] 
-        id_event = data["id_evet"]
-        self.db.delete_event(user_key,id_event) 
+    def get_event(self,data):
+        event,ename,datec,datef,state,visib,creator,group,size = self.db.get_event(data["user_key"],data["id_event"])
+        resp_data = {"message": GET_EVENT_RESP, "id_event": event, "event_name": ename, "date_ini": datec, "date_end": datef, 
+                     "state": state, "visibility": visib, "creator": creator, "id_group": group, "size":size  }
+        resp_data["ip"] = data["ip"] 
+        resp_data["port"] = data["port"] 
+        resp_data["sender_addr"] = data["sender_addr"]
+        return resp_data
+    
+    def get_group_type(self,data):
+        gtype = self.db.get_group_type(data["user_key"],data["id_group"])
+        resp_data = {"message": GET_GROUP_TYPE_RESP, "group_type": gtype  }
+        resp_data["ip"] = data["ip"] 
+        resp_data["port"] = data["port"] 
+        resp_data["sender_addr"] = data["sender_addr"]
+        return resp_data

@@ -61,7 +61,7 @@ class System:
         print("1. Eliminar notificación <id>")
         print("")
 
-    def show_event(self, name, last_name, ids_event, event_names, dates_ini, dates_end, states , visibilities, creators, id_groups, member=None):
+    def show_event(self, userkey, name, last_name, ids_event, event_names, dates_ini, dates_end, states , visibilities, creators, member=None):
         self.console_cleaned()
         print("*******************************************************************************************************")
         print("*                                                                                                     *")
@@ -72,11 +72,15 @@ class System:
         if member is None:
             print(f"Nombre: {name}")
             print(f"Apellidos: {last_name}")
+            print("")
+            for i,ename in enumerate(event_names):
+                if str(creators[i]) == str(userkey): print(f"{ids_event[i]} {ename} {dates_ini[i]} {dates_end[i]} {states[i]} {visibilities[i]} Creador")
+                else: print(f"{ids_event[i]} {ename} {dates_ini[i]} {dates_end[i]} {states[i]} {visibilities[i]}")
         else:
             print(f"Miembro ID: {member}")
-        print("")
-        for i,ename in enumerate(event_names):
-            print(f"{ids_event[i]} {ename} {dates_ini[i]} {dates_end[i]} {states[i]} {visibilities[i]} {creators[i]} {id_groups[i]}")
+            print("")
+            for i,ename in enumerate(event_names):
+                print(f"{ename} {dates_ini[i]} {dates_end[i]} {states[i]}")     
         print("")
         print("<back>: regresar al perfil")
         print("<home>: volver a la vista principal")
@@ -321,9 +325,9 @@ class System:
                                                 break
                                         if line == "exit" or line == "home" or line == "back": break
                                 if line == "4":
-                                    ids_event,event_names,dates_ini,dates_end,states,visibilities,creators,id_groups=user.get_all_events()
+                                    ids_event,event_names,dates_ini,dates_end,states,visibilities,creators,id_groups,sizes=user.get_all_events()
                                     while True:
-                                        self.show_event(name,last_name,ids_event,event_names,dates_ini,dates_end,states,visibilities,creators,id_groups)
+                                        self.show_event(user.user_key,name,last_name,ids_event,event_names,dates_ini,dates_end,states,visibilities,creators)
                                         line = input(line_char)
                                         lines = line.split(" ",1)
                                         line = lines[0]
@@ -360,7 +364,7 @@ class System:
                                                         time.sleep(2)
                                         if line == "exit" or line == "home" or line == "back": break
                                 if line == "5":
-                                    ids_group,group_names,group_types,group_refs = user.get_groups_belong_to()   
+                                    ids_group,group_names,group_types,group_refs,sizes = user.get_groups_belong_to()   
                                     while True:
                                         self.show_group(name, last_name, ids_group, group_names, group_types, group_refs)
                                         line = input(line_char)
@@ -412,6 +416,7 @@ class System:
                                                 index = ids_group.index(idgroup)
                                                 gtype = group_types[index]
                                                 gname = group_names[index]
+                                                size = sizes[index]
                                                 self.console_cleaned()
                                                 print("<back>: regresar al perfil")
                                                 print("<home>: volver a la vista principal")
@@ -445,7 +450,7 @@ class System:
                                                     elif level == "home": line = "home"
                                                     elif level == "back": line = "back"
                                                     break
-                                                user.add_member(idgroup,username,gname,gtype,role,level)
+                                                user.add_member(idgroup,username,gname,gtype,size,role,level)
                                                 break
                                         elif line == "3" and idgroup:
                                             if idgroup in ids_group:
@@ -454,7 +459,7 @@ class System:
                                                 gname = group_names[index]
                                                 gtype = group_types[index]
                                                 if gtype == GType.Hierarchical.value:
-                                                    ids_members = user.get_inferior_members(creator,idgroup)
+                                                    ids_members = user.get_inferior_members(int(creator),idgroup)
                                                     while True:
                                                         self.show_member(name, last_name,creator,gname, ids_members)
                                                         line = input(line_char)
