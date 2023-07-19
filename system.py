@@ -75,7 +75,7 @@ class System:
             print("")
             for i,ename in enumerate(event_names):
                 if str(creators[i]) == str(userkey): print(f"{ids_event[i]} {ename} {dates_ini[i]} {dates_end[i]} {states[i]} {visibilities[i]} Creador")
-                else: print(f"{ids_event[i]} {ename} {dates_ini[i]} {dates_end[i]} {states[i]} {visibilities[i]}")
+                else: print(f"{ids_event[i]} {ename} {dates_ini[i]} {dates_end[i]} {states[i]} {visibilities[i]} No creador")
         else:
             print(f"Miembro ID: {member}")
             print("")
@@ -92,7 +92,7 @@ class System:
             print("3. Rechazar evento (pendiente) <idevent>")
             print("")
 
-    def show_group(self, name, last_name, ids_group, group_names, group_types, group_refs):
+    def show_group(self, name, last_name, ids_group, group_names, group_types, group_refs, userkey):
         self.console_cleaned()
         print("******************************************************************************************************")
         print("*                                                                                                    *")
@@ -103,7 +103,8 @@ class System:
         print(f"Apellidos: {last_name}")
         print("")
         for i,ids in enumerate(ids_group):
-            print(f"{ids} {group_names[i]} {group_types[i]} {group_refs[i]}")
+            if userkey == group_refs[i]: print(f"{ids} {group_names[i]} {group_types[i]} Creador")
+            else: print(f"{ids} {group_names[i]} {group_types[i]} No creador")
         print("")
         print("<back>: regresar al perfil")
         print("<home>: volver a la vista principal")
@@ -366,7 +367,7 @@ class System:
                                 if line == "5":
                                     ids_group,group_names,group_types,group_refs,sizes = user.get_groups_belong_to()   
                                     while True:
-                                        self.show_group(name, last_name, ids_group, group_names, group_types, group_refs)
+                                        self.show_group(name, last_name, ids_group, group_names, group_types, group_refs,str(user.user_key))
                                         line = input(line_char)
                                         lines = line.split(" ",1)
                                         line = lines[0]
@@ -417,41 +418,51 @@ class System:
                                                 gtype = group_types[index]
                                                 gname = group_names[index]
                                                 size = sizes[index]
-                                                self.console_cleaned()
-                                                print("<back>: regresar al perfil")
-                                                print("<home>: volver a la vista principal")
-                                                print("<exit>: cerrar la aplicación")
-                                                print("")
-                                                while line == "2":
-                                                    print("Nombre de usuario que desea añadir:")
-                                                    username = input(line_char)
-                                                    if username == "": continue
-                                                    elif username == "exit": line = "exit"
-                                                    elif username == "home": line = "home"
-                                                    elif username == "back": line = "back"
-                                                    username = hash_key(username)
+                                                ref = group_refs[index]
+                                                if int(ref) == user.user_key:
+                                                    self.console_cleaned()
+                                                    print("<back>: regresar al perfil")
+                                                    print("<home>: volver a la vista principal")
+                                                    print("<exit>: cerrar la aplicación")
+                                                    print("")
+                                                    while line == "2":
+                                                        print("Nombre de usuario que desea añadir:")
+                                                        username = input(line_char)
+                                                        if username == "": continue
+                                                        elif username == "exit": line = "exit"
+                                                        elif username == "home": line = "home"
+                                                        elif username == "back": line = "back"
+                                                        username = hash_key(username)
+                                                        break
+                                                    if line != "2": break
+                                                    role = None
+                                                    level = None
+                                                    while line == "2" and gtype == GType.Hierarchical.value:
+                                                        print("Nombre del rol que desea asignarle: (Tenga en cuenta que 'Propietario' no se puede asignar)")
+                                                        role = input(line_char)
+                                                        if role == "": continue
+                                                        elif role == "exit": line = "exit"
+                                                        elif role == "home": line = "home"
+                                                        elif role == "back": line = "back"
+                                                        break
+                                                    while line == "2" and gtype == GType.Hierarchical.value:
+                                                        print("Nivel jerárquico del rol asignado: (Tenga en cuenta que si ya fue asignado previamente, este nivel no será tomado en cuenta. Si es un rol nuevo, asegúrese de establecer un valor para el nivel entre 0 y 1000)")
+                                                        level = input(line_char)
+                                                        if level == "": continue
+                                                        elif level == "exit": line = "exit"
+                                                        elif level == "home": line = "home"
+                                                        elif level == "back": line = "back"
+                                                        try: level = int(level)
+                                                        except: continue
+                                                        break
+                                                    boolean = user.add_member(idgroup,username,gname,gtype,size,role,level)
+                                                    if boolean == False:
+                                                        print("Usuario no existente")
+                                                        time.sleep(2)
                                                     break
-                                                if line != "2": break
-                                                role = None
-                                                level = None
-                                                while line == "2" and gtype == GType.Hierarchical.value:
-                                                    print("Nombre del rol que desea asignarle: (Tenga en cuenta que 'Propietario' no se puede asignar)")
-                                                    role = input(line_char)
-                                                    if role == "": continue
-                                                    elif role == "exit": line = "exit"
-                                                    elif role == "home": line = "home"
-                                                    elif role == "back": line = "back"
-                                                    break
-                                                while line == "2" and gtype == GType.Hierarchical.value:
-                                                    print("Nivel jerárquico del rol asignado: (Tenga en cuenta que si ya fue asignado previamente, este nivel no será tomado en cuenta. Si es un rol nuevo, asegúrese de establecer un valor para el nivel entre 0 y 1000)")
-                                                    level = input(line_char)
-                                                    if level == "": continue
-                                                    elif level == "exit": line = "exit"
-                                                    elif level == "home": line = "home"
-                                                    elif level == "back": line = "back"
-                                                    break
-                                                user.add_member(idgroup,username,gname,gtype,size,role,level)
-                                                break
+                                                else:
+                                                    print("No tiene permiso para añadir miembros. Usted no es el propietario")
+                                                    time.sleep(2)
                                         elif line == "3" and idgroup:
                                             if idgroup in ids_group:
                                                 index = ids_group.index(idgroup)
@@ -459,7 +470,7 @@ class System:
                                                 gname = group_names[index]
                                                 gtype = group_types[index]
                                                 if gtype == GType.Hierarchical.value:
-                                                    ids_members = user.get_inferior_members(int(creator),idgroup)
+                                                    ids_members,roles = user.get_inferior_members(int(creator),idgroup,str(user.user_key))
                                                     while True:
                                                         self.show_member(name, last_name,creator,gname, ids_members)
                                                         line = input(line_char)
@@ -468,7 +479,7 @@ class System:
                                                         id_member = lines[1] if len(lines) > 1 else None
                                                         if line == "1" and id_member:
                                                             if id_member in ids_members:
-                                                                ids_event,event_names,dates_ini,dates_end,states,visibilities,creators,id_groups=user.get_all_events(int(id_member))
+                                                                ids_event,event_names,dates_ini,dates_end,states,visibilities,creators,id_groups,_=user.get_all_events(int(id_member))
                                                                 while True:
                                                                     self.show_event(name,last_name,ids_event,event_names,dates_ini,dates_end,states,visibilities,creators,id_groups,id_member)
                                                                     line = input(line_char)

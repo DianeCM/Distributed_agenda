@@ -73,9 +73,11 @@ class ChordNode:
 
     @property 
     def Req_Method(self):
-        return { CREATE_PROFILE: self.create_account , CREATE_GROUP: self.create_group, REP_GROUP:self.create_group, CREATE_EVENT: self.create_event, REP_PROFILE: self.create_account,
+        return { CREATE_PROFILE: self.create_account , CREATE_GROUP: self.create_group, REP_GROUP:self.create_group, CREATE_EVENT: self.create_event, REP_PROFILE: self.create_account, GET_GROUP_TYPE:self.get_group_type,
                 GET_PROFILE: self.get_account,GET_GROUPS: self.get_groups_belong_to, GET_EVENTS:self.get_all_events,REP_EVENT: self.create_event, GET_NOTIFICATIONS: self.get_notifications,GET_EVENT:self.get_event,
-                DELETE_NOTIFICATION:self.delete_notification,DELETE_NOTIFICATION_REP:self.delete_notification, ACEPT_EVENT: self.acept_pendient_event,ACEPT_EVENT_REP:self.acept_pendient_event, DELETE_EVENT: self.delete_event}
+                DELETE_NOTIFICATION:self.delete_notification,DELETE_NOTIFICATION_REP:self.delete_notification, ACCEPT_EVENT: self.accept_pendient_event,ACCEPT_EVENT_REP:self.accept_pendient_event, DELETE_EVENT: self.delete_event,
+                GET_NON_HIERARCHICAL_MEMBERS:self.get_equal_members, GET_HIERARCHICAL_MEMBERS:self.get_inferior_members, ADD_MEMBER_ACCOUNT:self.add_member_account, ADD_MEMBER_ACCOUNT_REP:self.add_member_account,
+                ADD_MEMBER_GROUP:self.add_member_group, ADD_MEMBER_GROUP_REP:self.add_member_group}
     
     @property
     def Serialize_Address(self):
@@ -575,7 +577,7 @@ class ChordNode:
         resp_data["sender_addr"] = data["sender_addr"]
         return resp_data 
       
-    def acept_pendient_event(self,data):
+    def accept_pendient_event(self,data):
         self.db.accept_pendient_event(data["user_key"],data["id_event"])
 
     def get_event(self,data):
@@ -594,3 +596,25 @@ class ChordNode:
         resp_data["port"] = data["port"] 
         resp_data["sender_addr"] = data["sender_addr"]
         return resp_data
+    
+    def get_equal_members(self,data):
+        ids = self.db.get_equal_members(data["id_group"])
+        resp_data = {"message": GET_NON_HIER_MEMB_RESP, "ids": ids  }
+        resp_data["ip"] = data["ip"] 
+        resp_data["port"] = data["port"] 
+        resp_data["sender_addr"] = data["sender_addr"]
+        return resp_data
+    
+    def get_inferior_members(self,data):
+        ids,roles = self.db.get_inferior_members(data["id_user"],data["id_group"])
+        resp_data = {"message": GET_HIER_MEMB_RESP, "ids": ids, "roles": roles  }
+        resp_data["ip"] = data["ip"] 
+        resp_data["port"] = data["port"] 
+        resp_data["sender_addr"] = data["sender_addr"]
+        return resp_data
+    
+    def add_member_group(self,data):
+        self.db.add_member_group(data["id_group"],data["id_user"],data["role"],data["level"])
+
+    def add_member_account(self,data):
+        self.db.add_member_account(data["user_key"],data["id_group"],data["group_name"],data["group_type"],data["id_ref"],data["size"])

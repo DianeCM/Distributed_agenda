@@ -32,7 +32,7 @@ class Client:
         name, last = self.check_account(self.user_key,address)
         if not name:
             data = {"message": CREATE_PROFILE, "ip": "127.0.0.1", "port": "5557", "user_key": self.user_key, "user_name": user_name, "last_name": last_name, "password": password  }
-            print(f"Sending CREATE_PROFILE {self.user_key} request to {str(address)}")
+            print(f"Sending CREATE_PROFILE request to {str(address)}")
             send_request(address,data=data)
             return True
         return False    
@@ -67,7 +67,7 @@ class Client:
         print(f"Sending DELETE_NOTIFICATION request to {str(address)}")
         send_request(address,data=data)
 
-    def create_personal_event(self, user_key, event_name, date_initial, date_end, privacity=Privacity.Public.value, state=State.Personal.value, id_group=None, id_creator=None,id_event=None, address=None):
+    def create_personal_event(self, user_key, event_name, date_initial, date_end, privacity=Privacity.Public.value, state=State.Personal.value, id_group=None, id_creator=None,id_event=None, total=None, address=None):
         if not address: address = self.server_addr
         if id_event is None:
             _,_,_,_,_,_,_,_,sizes = self.get_all_events(user_key,address=address)
@@ -126,7 +126,7 @@ class Client:
             id_creator = int(id_creator)
             gtype = self.get_group_type(id_creator,id_group,address)
             if gtype == GType.Non_hierarchical.value: 
-                ids_user,_ = self.get_inferior_members(id_creator,id_group,address)
+                ids_user,_ = self.get_inferior_members(id_creator,id_group,str(id_creator),address)
                 members = ids_user
             else: members = self.get_equal_members(id_creator,id_group,address)
             for id_user in members: self.delete_user_event(int(id_user),id_event,address)
@@ -147,8 +147,8 @@ class Client:
     
     def accept_pendient_event(self, id_event,address=None):
         if not address: address = self.server_addr
-        data = {"message": ACEPT_EVENT, "ip": "127.0.0.1", "port": "5557", "user_key": self.user_key, "id_event": id_event  }
-        print(f"Sending ACEPT_EVENT request to {str(address)}")
+        data = {"message": ACCEPT_EVENT, "ip": "127.0.0.1", "port": "5557", "user_key": self.user_key, "id_event": id_event  }
+        print(f"Sending ACCEPT_EVENT request to {str(address)}")
         send_request(address,data=data)
 
     def decline_pendient_event(self, id_event,address=None):
@@ -166,15 +166,14 @@ class Client:
         idcurrent = hash_key(f'{self.user_key}_{total}')
         id_event = str(idcurrent)
         gtype = self.get_group_type(self.user_key,id_group,address)
-        print(gtype)
         if gtype == GType.Hierarchical.value: 
-            ids_user,_ = self.get_inferior_members(self.user_key,id_group,address)
+            ids_user,_ = self.get_inferior_members(self.user_key,id_group,str(self.user_key),address)
             members = ids_user
         else: members = self.get_equal_members(self.user_key,id_group,address)
         for id_user in members: 
-            if id_user == str(self.user_key): self.create_personal_event(self.user_key,event_name,date_initial,date_end,Privacity.Public.value,State.Asigned.value,id_group,str(self.user_key),id_event,address)
-            elif gtype == GType.Non_hierarchical.value: self.create_personal_event(int(id_user),event_name,date_initial,date_end,Privacity.Public.value,State.Asigned.value,id_group,str(self.user_key),id_event,address)
-            else: self.create_personal_event(int(id_user),event_name,date_initial,date_end,Privacity.Public.value,State.Pendient.value,id_group,str(self.user_key),id_event,address)
+            if id_user == str(self.user_key): self.create_personal_event(self.user_key,event_name,date_initial,date_end,Privacity.Public.value,State.Asigned.value,id_group,str(self.user_key),id_event,total,address)
+            elif gtype == GType.Hierarchical.value: self.create_personal_event(int(id_user),event_name,date_initial,date_end,Privacity.Public.value,State.Asigned.value,id_group,str(self.user_key),id_event,total,address)
+            else: self.create_personal_event(int(id_user),event_name,date_initial,date_end,Privacity.Public.value,State.Pendient.value,id_group,str(self.user_key),id_event,total,address)
 
     def add_member(self, id_group, id_user, group_name, group_type, size, role=None, level=None,address=None):
         id_user = int(id_user)
@@ -183,25 +182,26 @@ class Client:
         if  user_name:
             self.add_member_group(id_group,id_user,role,level,address)
             self.add_member_account(id_user,id_group, group_name, group_type, str(self.user_key),size,address)
+            return True
+        return False
 
     def add_member_group(self,id_group,id_user,role,level,address=None):
         if not address: address = self.server_addr
-        data = {"message": ADD_MEMBER_GROUP, "ip": "127.0.0.1", "port": "5557", "user_key": self.user_key, "id_group": id_group, "id_user": id_user,"role": role, "level": level, "sender_addr": self.addr  }
+        data = {"message": ADD_MEMBER_GROUP, "ip": "127.0.0.1", "port": "5557", "user_key": self.user_key, "id_group": id_group, "id_user": id_user,"role": role, "level": level  }
         print(f"Sending ADD_MEMBER_GROUP request to {str(address)}")
         send_request(address,data=data)
 
     def add_member_account(self,id_user, id_group, group_name, group_type, ref, size,address=None):
         if not address: address = self.server_addr
-        data = {"message": ADD_MEMBER_ACCOUNT, "ip": "127.0.0.1", "port": "5557", "user_key": id_user, "id_group": id_group, "group_name": group_name, "group_type": group_type, "id_ref": ref, 
-                "size": size, "sender_addr": self.addr  }
+        data = {"message": ADD_MEMBER_ACCOUNT, "ip": "127.0.0.1", "port": "5557", "user_key": id_user, "id_group": id_group, "group_name": group_name, "group_type": group_type, "id_ref": ref, "size": size  }
         print(f"Sending ADD_MEMBER_ACCOUNT request to {str(address)}")
         send_request(address,data=data)
 
-    def get_inferior_members(self, id_creator, id_group,address=None):
+    def get_inferior_members(self, id_creator, id_group,id_user,address=None):
         if not address: address = self.server_addr
         request = GET_HIERARCHICAL_MEMBERS
-        data = {"message": request, "ip": "127.0.0.1", "port": "5557", "user_key": id_creator, "id_group": id_group  }
-        print(f"Sending ADD_MEMBERGROUP {id_creator} request to {str(address)}")
+        data = {"message": request, "ip": "127.0.0.1", "port": "5557", "user_key": id_creator, "id_group": id_group,"id_user": id_user, "sender_addr": self.addr  }
+        print(f"Sending GET_HIERARCHICAL_MEMBERS request to {str(address)}")
         send_request(address,data=data)
         data = self.recieve_data(request) 
         return data["ids"],data["roles"]
@@ -209,12 +209,13 @@ class Client:
     def get_equal_members(self, id_creator, id_group,address=None):
         if not address: address = self.server_addr
         request = GET_NON_HIERARCHICAL_MEMBERS
-        data = {"message": request, "ip": "127.0.0.1", "port": "5557", "user_key": id_creator, "id_group": id_group  }
-        print(f"Sending ADD_MEMBERGROUP {id_creator} request to {str(address)}")
+        data = {"message": request, "ip": "127.0.0.1", "port": "5557", "user_key": id_creator, "id_group": id_group, "sender_addr": self.addr  }
+        print(f"Sending GET_NON_HIERARCHICAL_MEMBERS request to {str(address)}")
         send_request(address,data=data)
         data = self.recieve_data(request) 
         return data["ids"]
         
     def get_member_events(self, id_member, address=None):
         id_member = int(id_member)
+        if not address: address = self.server_addr
         return self.get_all_events(id_member,True,address)
