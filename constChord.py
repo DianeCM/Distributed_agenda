@@ -23,6 +23,7 @@ GET_DATA_REP  = '22'
 SET_NODES = '23'
 CHECK_SUC ='24' 
 CHECK_SUC_RESP = '25'
+DEL_REP_DATA = '26'
 
 #Creates and Updates
 CREATE_PROFILE = '30'
