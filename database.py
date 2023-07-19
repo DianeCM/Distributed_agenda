@@ -51,16 +51,6 @@ class Group(Model):
 
     class Meta:
         database = None
-        autoincremental = 1
-
-    def save(self, *args, **kwargs):
-        if self.group is None:
-            idcurrent = Group._meta.autoincremental
-            creator = int(self.creator)
-            idcurrent = hash_key(f'{creator}_{idcurrent}')
-            self.group = str(idcurrent)
-            Group._meta.autoincremental += 1
-        Model.save(self, *args, **kwargs)
 
 
 class MemberAccount(Model):
@@ -69,6 +59,7 @@ class MemberAccount(Model):
     gname = CharField(max_length=50, null=False)
     gtype = CharField(max_length=15, null=False)
     ref = CharField(max_length=70,null=False)
+    size = IntegerField(null=False)
 
     class Meta:
         database = None
@@ -96,6 +87,7 @@ class Event(Model):
     visib = CharField(max_length=9, null=False)
     creator = CharField(max_length=70,null=True)
     group = CharField(max_length=70,null=True)
+    size = IntegerField(null=False)
     
     class Meta:
         database = None
@@ -129,15 +121,15 @@ class DBModel:
             return None, None
         return user.name, user.last
     
-    def create_group(self, userkey:int, name: str, gtype: str): 
+    def create_group(self, userkey:int, id_group:str, name: str, gtype: str, size:int): 
         userkeyn = str(userkey)
         try: Account.get(user=userkeyn)
         except DoesNotExist: 
             print("Usuario no existe")
             return
-        group = Group.create(creator=userkeyn, gname=name, gtype=gtype)
+        group = Group.create(creator=userkeyn, group=id_group, gname=name, gtype=gtype, size=size)
         group.save()
-        self.add_member_account(userkey, group.group, name, gtype, userkeyn)
+        self.add_member_account(userkey, group.group, name, gtype, userkeyn, size)
         self.add_member_group(group.group, userkey, "Propietario")
     
     def get_notifications(self, userkey: int):
@@ -162,16 +154,16 @@ class DBModel:
             return
         notif.delete_instance(recursive=True)
 
-    def create_event(self, userkey: int, id_event:str, name:str, date_ini:str, date_end:str, state:str, privacity:str, id_group:str, id_creator:str):
+    def create_event(self, userkey: int, id_event:str, name:str, date_ini:str, date_end:str, state:str, privacity:str, id_group:str, id_creator:str, size:int):
         userkeyn = str(userkey)
         try: Account.get(user=userkeyn)
         except DoesNotExist: 
             print("Usuario no existe")
             return
-        registers = Event.select().where((Event.user == userkeyn) & (((date_ini <= Event.datec) & (Event.datec <= date_end)) | ((date_ini <= Event.datef) & (Event.datef <= date_end))))
+        registers = Event.select().where((Event.user == userkeyn) & (((date_ini <= Event.datec) & (Event.datec <= date_end)) | ((date_ini <= Event.datef) & (Event.datef <= date_end)) | ((Event.datec <= date_ini) & (date_ini <= Event.datef)) | ((Event.datec <= date_end) & (date_end <= Event.datef))))
         for register in registers:
             self.__add_notification(userkeyn, f"El evento {name} ({state}) tiene horarios coincidentes con el evento {register.ename} ({register.state})")
-        event = Event.create(user=userkeyn, event=id_event, ename=name, datec=date_ini, datef=date_end, state=state, visib=privacity, group=id_group, creator=id_creator)
+        event = Event.create(user=userkeyn, event=id_event, ename=name, datec=date_ini, datef=date_end, state=state, visib=privacity, group=id_group, creator=id_creator, size=size)
         event.save()
         if state == State.Pendient.value:
             self.__add_notification(userkey, f"Tiene un nuevo evento pendiente: {name}")
@@ -192,16 +184,18 @@ class DBModel:
         visibs = []
         creators = []
         idgroups = []
+        sizes = []
         for register in registers:
             idevent.append(register.event)
             enames.append(register.ename)
-            datesc.append(register.datec)#.strftime('%Y-%m-%d %H:%M'))
-            datesf.append(register.datef)#.strftime('%Y-%m-%d %H:%M'))
+            datesc.append(register.datec)
+            datesf.append(register.datef)
             states.append(register.state)
             visibs.append(register.visib)
             creators.append(register.creator)
             idgroups.append(register.group)
-        return idevent, enames, datesc, datesf, states, visibs, creators, idgroups
+            sizes.append(register.size)
+        return idevent, enames, datesc, datesf, states, visibs, creators, idgroups, sizes
     
     def get_event(self, userkey: int, id_event: str):
         userkeyn = str(userkey)
@@ -209,8 +203,8 @@ class DBModel:
         except DoesNotExist: 
             print("Usuario no existe")
             return
-        event = Event.get((Event.user == userkeyn) & Event.event == id_event)
-        return event.event,event.ename,event.datec,event.datef,event.state,event.visib,event.creator,event.group
+        event = Event.get((Event.user == userkeyn) & (Event.event == id_event))
+        return event.event,event.ename,event.datec,event.datef,event.state,event.visib,event.creator,event.group,event.size
     
     def get_groups_belong_to(self, userkey: int):
         userkeyn = str(userkey)
@@ -223,43 +217,44 @@ class DBModel:
         gnames = []
         gtypes = []
         refs = []
+        sizes = []
         for register in registers:
             idsgroup.append(register.group)
             gnames.append(register.gname)
             gtypes.append(register.gtype)
             refs.append(register.ref)
-        return idsgroup,gnames,gtypes,refs
+            sizes.append(register.size)
+        return idsgroup,gnames,gtypes,refs,sizes
     
-    def acept_pendient_event(self, userkey: int, idevent: str):
+    def accept_pendient_event(self, userkey: int, idevent: str):
         userkeyn = str(userkey)
         try: event = Event.get((Event.user==userkeyn) & (Event.event==idevent))
         except DoesNotExist: 
             print("Evento no existe")
             return
-        event.state = State.Asigned
+        event.state = State.Asigned.value
         event.save()
-        self.__add_notification(userkey, f'Ha aceptado el evento {event.name}')
+        self.__add_notification(userkey, f'Ha aceptado el evento {event.ename}')
 
-    def get_inferior_members(self, idgroup:str, userkey:int):
-        userkeyn = str(userkey)
-        member = MemberGroup.get((MemberGroup.group==idgroup) & (MemberGroup.user==userkeyn))
+    def get_inferior_members(self, userkey:str, idgroup:str):
+        member = MemberGroup.get((MemberGroup.group==idgroup) & (MemberGroup.user==userkey))
         level = member.level
         registers = MemberGroup.select().where((MemberGroup.group==idgroup) & (MemberGroup.level > level))
-        ids = []
-        for register in registers:
-            ids.append(register.user)
-        return ids
-    
-    def get_equal_members(self, idgroup:str):
-        registers = MemberGroup.select().where(MemberGroup.group==idgroup)
         ids = []
         roles = []
         for register in registers:
             ids.append(register.user)
             roles.append(register.role)
-        return ids,roles
+        return ids, roles
     
-    def get_group_type(self, idgroup:str, creatorkey:int):
+    def get_equal_members(self, idgroup:str):
+        registers = MemberGroup.select().where((MemberGroup.group==idgroup))
+        ids = []
+        for register in registers:
+            ids.append(register.user)
+        return ids
+    
+    def get_group_type(self, creatorkey:int, idgroup:str):
         creatorkeyn = str(creatorkey)
         try: Account.get(user=creatorkeyn)
         except DoesNotExist: 
@@ -268,21 +263,26 @@ class DBModel:
         group = Group.get((Group.group == idgroup) & (Group.creator == creatorkeyn))
         return group.gtype
     
-    def delete_event(self, idevent:bytes): ############################## TODAVIA ############
-        Event._meta.database = self.database
-        registers = Event.get((Event.idevent == idevent)&(Event.state == State.Personal))
+    def delete_event(self, userkey:int, idevent:str):
+        userkeyn = str(userkey)
+        try: Account.get(user=userkeyn)
+        except DoesNotExist: 
+            print("Usuario no existe")
+            return
+        registers = Event.get((Event.event == idevent) & (Event.user == userkeyn))
         if registers: registers.delete_instance(recursive=True)
+        else: print("Este evento no existe")
         
-    def add_member_account(self, userkey:int, idgroup:str, gname:str, gtype:str, idref:str):
+    def add_member_account(self, userkey:int, idgroup:str, gname:str, gtype:str, idref:str, size:int):
         userkeyn = str(userkey)
         try: Account.get(user=userkeyn)
         except DoesNotExist:
             print("Usuario no existe")
             return
-        member = MemberAccount.create(user=userkeyn, group=idgroup, gname=gname, gtype=gtype, ref=idref)
+        member = MemberAccount.create(user=userkeyn, group=idgroup, gname=gname, gtype=gtype, ref=idref, size=size)
         member.save()
 
-    def add_member_group(self, idgroup: str, userkey: int, role: str='Miembro', level: int=None):
+    def add_member_group(self, idgroup: str, userkey: int, role: str=None, level: int=None):
         userkeyn = str(userkey)
         try: Group.get(group=idgroup)
         except DoesNotExist: return
@@ -293,13 +293,13 @@ class DBModel:
                 asign = MemberGroup.create(group=idgroup, user=userkeyn, role=role, level=0)
                 asign.save()
             if role_level is not None: print("Solo puede haber un propietario")
-        elif role == 'Miembro':
-            asign = MemberGroup.create(group=idgroup, user=userkeyn, role=role, level=1000)
+        elif role is None:
+            asign = MemberGroup.create(group=idgroup, user=userkeyn, role="Miembro", level=1000)
             asign.save()
         else:
             try: role_level = MemberGroup.get((MemberGroup.group==idgroup)&(MemberGroup.role==role))
             except:
-                if level is not None and (0 < level < 1000):
+                if level is not None and 0 < level and level < 1000:
                     asign = MemberGroup.create(group=idgroup, user=userkeyn, role=role, level=level)
                     asign.save()
                 else: print("Debe asignar un valor de nivel al rol mayor que 0 y menor que 1000")
