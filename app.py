@@ -159,13 +159,13 @@ class Client:
         print(f"Sending DECLINE_EVENT request to {str(address)}")
         for id_user in members: self.delete_user_event(int(id_user),id_event,address)
 
-    def create_groupal_event(self, event_name, date_initial, date_end, id_group, address=None):
+    def create_groupal_event(self, event_name, date_initial, date_end, id_group,id_ref,address=None):
         if not address: address = self.server_addr
         _,_,_,_,_,_,_,_,sizes = self.get_all_events(self.user_key,address=address)
         total = max(sizes) + 1 if len(sizes) > 0 else 1
         idcurrent = hash_key(f'{self.user_key}_{total}')
         id_event = str(idcurrent)
-        gtype = self.get_group_type(self.user_key,id_group,address)
+        gtype = self.get_group_type(int(id_ref),id_group,address)
         if gtype == GType.Hierarchical.value: 
             ids_user,_ = self.get_inferior_members(self.user_key,id_group,str(self.user_key),address)
             members = ids_user

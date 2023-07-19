@@ -117,7 +117,7 @@ class DBModel:
         userkeyn = str(userkey)
         try: user = Account.get((Account.user == userkeyn) & (Account.passw == password)) if password else Account.get((Account.user == userkeyn)) 
         except DoesNotExist: 
-            print("Usuario no existe")
+            notify_data("Usuario no existe","Error")
             return None, None
         return user.name, user.last
     
@@ -125,7 +125,7 @@ class DBModel:
         userkeyn = str(userkey)
         try: Account.get(user=userkeyn)
         except DoesNotExist: 
-            print("Usuario no existe")
+            notify_data("Usuario no existe","Error")
             return
         group = Group.create(creator=userkeyn, group=id_group, gname=name, gtype=gtype, size=size)
         group.save()
@@ -210,7 +210,7 @@ class DBModel:
         userkeyn = str(userkey)
         try: Account.get(user=userkeyn)
         except DoesNotExist: 
-            print("Usuario no existe")
+            notify_data("Usuario no existe","Error")
             return
         registers = MemberAccount.select().where(MemberAccount.user == userkeyn)
         idsgroup = []
@@ -230,11 +230,10 @@ class DBModel:
         userkeyn = str(userkey)
         try: event = Event.get((Event.user==userkeyn) & (Event.event==idevent))
         except DoesNotExist: 
-            print("Evento no existe")
+            notify_data("Evento no existe","Error")
             return
         event.state = State.Asigned.value
         event.save()
-        self.__add_notification(userkey, f'Ha aceptado el evento {event.ename}')
 
     def get_inferior_members(self, userkey:str, idgroup:str):
         member = MemberGroup.get((MemberGroup.group==idgroup) & (MemberGroup.user==userkey))

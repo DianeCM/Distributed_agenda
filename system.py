@@ -410,7 +410,7 @@ class System:
                                                     print("Las fechas proporcionadas son incorrectas. Inténtelo de nuevo")
                                                     time.sleep(2)
                                                     continue
-                                                user.create_groupal_event(ename,date_ini,date_end,idgroup)
+                                                user.create_groupal_event(ename,date_ini,date_end,idgroup,group_refs[index])
                                                 break
                                         elif line == "2" and idgroup:
                                             if idgroup in ids_group:
