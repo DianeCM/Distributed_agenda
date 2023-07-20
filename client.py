@@ -1,80 +1,221 @@
-import zmq
+from  utils import *
 from constChord import *
-from utils import *
-import json
-import random
 import time 
-import socket
+from database import Privacity, State, GType
 
-receiver = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-receiver.bind(("127.0.0.1",5557))
-receiver.listen()
 
-ports = ["5030"]
-a = [0,686916772571941171600637909103417451352519039489, 794143421378275501213700159784909595755571930874,
-      865726554065021108825757911552689027386170761226, 915774693674738982705217759031541721583339531624,pow(2,160)]
+ports = ["5123","5050","5030","5132"]
 
-#for i in range(len(a)-1):
-#  for port in ports:
-#    key = random.randint(a[i],a[i+1])
-#    consumer_sender.connect(f"tcp://127.0.0.1:{port}")
-#
-#    print(f"Sending LOOKUP_REQ of {key} key to 127.0.0.1:{port}")
-#    consumer_sender.send_json(data)
-#
-#    time.sleep(10)
-#
-#    data = receiver.recv_json()
-#    node = data["node"]
-#    ip = data["ip"]
-#    port = data["port"]
-#    print(f"Recieving LOOKUP_REP of {node} for {key} key, from {ip}:{port}")
-
-pairs = []
-for i in range(len(a)-1):
-  for j,port in enumerate(ports):
-    key = random.randint(a[i],a[i+1])
-    value = random.randint(0,100)
-    pairs.append((key,value,j))
-    address = ("127.0.0.1",int(port))
-    data = {"message": SET_DATA_REQ, "ip":"127.0.0.1" , "port": "5557", "key": key , "value": value}
-    print(f"Sending SET_DATA_REQ of {key}:{value} key to 127.0.0.1:{port}")
-    send_request(address,data=data)
-    time.sleep(4)
+class Client:
     
-def check_value(key,expected_value,port): 
-    address = ("127.0.0.1",int(port))
-    data = {"message": GET_DATA_REQ, "ip":"127.0.0.1" , "port": "5557", "key": key , "sender_addr": ("127.0.0.1",5557)}
-    send_request(address,data=data)
-    conn, addr = receiver.accept()
-    msg=conn.recv(1024)
-    msg = msg.decode('utf-8')
-    data = json.loads(msg) 
-
-    ip = data["ip"]
-    port = data["port"]
-    value = data["value"]
-    print(f"Recieving GET_DATA_REP of {key}:{value}, from {ip}:{port}")
-    assert  expected_value == value
+    def __init__(self,my_address,server_addr):
+        self.receiver = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.receiver.bind(my_address)
+        self.receiver.listen()
+        self.server_addr = server_addr
+        self.addr = my_address
+   
+    def recieve_data(self,request):
+        conn, addr = self.receiver.accept()
+        msg=conn.recv(1024)
+        msg = msg.decode('utf-8')
+        data =  json.loads(msg)
+        response = data["message"]
+        if not response  == str(int(request)+1):
+            notify_data(f"Worg data response type expected {str(int(request)+1)} and got {response}","Error")
+        else:
+            return data
     
+    def create_account(self, user_key, user_name, last_name, password,address=None):
+        if not address: address = self.server_addr
+        self.user_key = hash_key(user_key)
+        name, last = self.check_account(self.user_key,address)
+        if not name:
+            data = {"message": CREATE_PROFILE, "ip": "127.0.0.1", "port": "5557", "user_key": self.user_key, "user_name": user_name, "last_name": last_name, "password": password  }
+            print(f"Sending CREATE_PROFILE request to {str(address)}")
+            send_request(address,data=data)
+            return True
+        return False    
 
-def check_replication():
-   for pair in pairs:
-    key = pair[0]
-    value = pair[1]
-    port1 = ports[pair[2]]
-    port2  = ports[(pair[2]+1)%len(ports)]
-    check_value(key,value,port1)
-    time.sleep(3)
-    print()
-    check_value(key,value,port2)
-    time.sleep(3)
-    print()
-
-check_replication()
-print("Successfull")
-
+    def get_account(self, user_key, password,address=None):
+        self.user_key = hash_key(user_key)
+        return self.check_account(self.user_key,address,password=password)
     
+    def create_group(self, group_name, group_type,address=None):
+        if not address: address = self.server_addr
+        _,_,_,_,sizes = self.get_groups_belong_to(address)
+        total = max(sizes) + 1 if len(sizes) > 0 else 1
+        user = self.user_key
+        idcurrent = hash_key(f'{user}_{total}')
+        id_group = str(idcurrent)
+        data = {"message": CREATE_GROUP, "ip": "127.0.0.1", "port": "5557", "user_key": self.user_key, "id_group": id_group, "group_name": group_name, "group_type": group_type, "size": total   }
+        print(f"Sending CREATE_GROUP request to {str(address)}")
+        send_request(address,data=data)
 
+    def get_notifications(self,address=None):
+        if not address: address = self.server_addr
+        request = GET_NOTIFICATIONS
+        data = {"message": request, "ip": "127.0.0.1", "port": "5557", "user_key": self.user_key, "sender_addr": self.addr  }
+        print(f"Sending GET_NOTIFICATIONS request to {str(address)}")
+        send_request(address,data=data)
+        data = self.recieve_data(request) 
+        return data['ids'], data['texts']
 
+    def delete_notification(self, id_notification,address=None):
+        if not address: address = self.server_addr
+        data = {"message": DELETE_NOTIFICATION, "ip": "127.0.0.1", "port": "5557", "user_key": self.user_key, "id_notification": id_notification  }
+        print(f"Sending DELETE_NOTIFICATION request to {str(address)}")
+        send_request(address,data=data)
 
+    def create_personal_event(self, user_key, event_name, date_initial, date_end, privacity=Privacity.Public.value, state=State.Personal.value, id_group=None, id_creator=None,id_event=None, total=None, address=None):
+        if not address: address = self.server_addr
+        if id_event is None:
+            _,_,_,_,_,_,_,_,sizes = self.get_all_events(user_key,address=address)
+            total = max(sizes) + 1 if len(sizes) > 0 else 1
+            user = user_key
+            idcurrent = hash_key(f'{user}_{total}')
+            id_event = str(idcurrent)
+        data = {"message": CREATE_EVENT, "ip": "127.0.0.1", "port": "5557", "user_key": user_key, "id_event" : id_event, "event_name": event_name, 
+                "date_initial": date_initial , "date_end": date_end, "visibility": privacity, "state": state, "group":id_group, "creator":id_creator, "size": total  }
+        print(f"Sending CREATE_EVENT request to {str(address)}")
+        send_request(address,data=data)
+    
+    def get_all_events(self,user_key=None,privacity=False,address=None):
+        if not address: address = self.server_addr
+        request = GET_EVENTS
+        userkey = user_key if user_key else self.user_key
+        data = {"message": request, "ip": "127.0.0.1", "port": "5557", "user_key": userkey, "privacity": privacity , "sender_addr": self.addr  }
+        print(f"Sending GET_EVENTS request to {str(address)}")
+        send_request(address,data=data)
+        data = self.recieve_data(request) 
+        return data["ids_event"],data["event_names"],data["dates_ini"],data["dates_end"],data["states"],data["visibilities"],data["creators"],data["id_groups"],data["sizes"]
+
+    def get_groups_belong_to(self,address=None):
+        if not address: address = self.server_addr
+        request = GET_GROUPS
+        data = {"message": request, "ip": "127.0.0.1", "port": "5557", "user_key": self.user_key, "sender_addr": self.addr  }
+        print(f"Sending GET_GROUPS request to {str(address)}")
+        send_request(address,data=data)
+        data = self.recieve_data(request) 
+        return data["ids_group"],data["group_names"],data["group_types"],data["group_refs"],data["sizes"]
+    
+    def get_event(self, user_key, id_event, address=None):
+        if not address: address = self.server_addr
+        request = GET_EVENT
+        data = {"message": request, "ip": "127.0.0.1", "port": "5557", "user_key": user_key, "id_event": id_event, "sender_addr": self.addr  }
+        print(f"Sending GET_EVENT request to {str(address)}")
+        send_request(address,data=data)
+        data = self.recieve_data(request) 
+        return data["id_event"],data["event_name"],data["date_ini"],data["date_end"],data["state"],data["visibility"],data["creator"],data["id_group"],data["size"]
+
+    def check_account(self,user_key,address,password = None):
+        if not address: address = self.server_addr
+        request = GET_PROFILE
+        data = {"message": request, "ip": "127.0.0.1", "port": "5557", "user_key": user_key, "password": password, "sender_addr": self.addr  }
+        print(f"Sending GET_PROFILE request to {str(address)}")
+        send_request(address,data=data)
+        data = self.recieve_data(request)       
+        return data['user_name'], data['last_name']
+
+    def delete_event(self, id_event,address=None):
+        if not address: address = self.server_addr
+        _,_,_,_,state,_,id_creator,id_group,_ = self.get_event(self.user_key,id_event,address)
+        assert (id_creator and int(id_creator) == self.user_key) or state == State.Personal.value
+        if id_group == None: self.delete_user_event(self.user_key,id_event,address)
+        else:
+            id_creator = int(id_creator)
+            gtype = self.get_group_type(id_creator,id_group,address)
+            if gtype == GType.Non_hierarchical.value: 
+                ids_user,_ = self.get_inferior_members(id_creator,id_group,str(id_creator),address)
+                members = ids_user
+            else: members = self.get_equal_members(id_creator,id_group,address)
+            for id_user in members: self.delete_user_event(int(id_user),id_event,address)
+
+    def delete_user_event(self,user_key,id_event,address):
+        data = {"message":DELETE_EVENT, "ip":"127.0.0.1", "port":"5557", "user_key":user_key, "id_event":id_event  }
+        print(f"Sending DELETE_EVENT request to {str(address)}")
+        send_request(address,data=data)
+
+    def get_group_type(self, id_creator, id_group, address=None):
+        if not address: address = self.server_addr
+        request = GET_GROUP_TYPE
+        data = {"message": request, "ip": "127.0.0.1", "port": "5557", "user_key": id_creator, "id_group": id_group, "sender_addr": self.addr  }
+        print(f"Sending GET_GROUP_TYPE request to {str(address)}")
+        send_request(address,data=data)
+        data = self.recieve_data(request) 
+        return data["group_type"]
+    
+    def accept_pendient_event(self, id_event,address=None):
+        if not address: address = self.server_addr
+        data = {"message": ACCEPT_EVENT, "ip": "127.0.0.1", "port": "5557", "user_key": self.user_key, "id_event": id_event  }
+        print(f"Sending ACCEPT_EVENT request to {str(address)}")
+        send_request(address,data=data)
+
+    def decline_pendient_event(self, id_event,address=None):
+        if not address: address = self.server_addr
+        _,_,_,_,state,_,id_creator,id_group,_ = self.get_event(self.user_key,id_event,address)
+        assert state == State.Pendient.value
+        members = self.get_equal_members(int(id_creator),id_group,address)
+        print(f"Sending DECLINE_EVENT request to {str(address)}")
+        for id_user in members: self.delete_user_event(int(id_user),id_event,address)
+
+    def create_groupal_event(self, event_name, date_initial, date_end, id_group, address=None):
+        if not address: address = self.server_addr
+        _,_,_,_,_,_,_,_,sizes = self.get_all_events(self.user_key,address=address)
+        total = max(sizes) + 1 if len(sizes) > 0 else 1
+        idcurrent = hash_key(f'{self.user_key}_{total}')
+        id_event = str(idcurrent)
+        gtype = self.get_group_type(self.user_key,id_group,address)
+        if gtype == GType.Hierarchical.value: 
+            ids_user,_ = self.get_inferior_members(self.user_key,id_group,str(self.user_key),address)
+            members = ids_user
+        else: members = self.get_equal_members(self.user_key,id_group,address)
+        for id_user in members: 
+            if id_user == str(self.user_key): self.create_personal_event(self.user_key,event_name,date_initial,date_end,Privacity.Public.value,State.Asigned.value,id_group,str(self.user_key),id_event,total,address)
+            elif gtype == GType.Hierarchical.value: self.create_personal_event(int(id_user),event_name,date_initial,date_end,Privacity.Public.value,State.Asigned.value,id_group,str(self.user_key),id_event,total,address)
+            else: self.create_personal_event(int(id_user),event_name,date_initial,date_end,Privacity.Public.value,State.Pendient.value,id_group,str(self.user_key),id_event,total,address)
+
+    def add_member(self, id_group, id_user, group_name, group_type, size, role=None, level=None,address=None):
+        id_user = int(id_user)
+        if not address: address = self.server_addr
+        user_name, last_name = self.check_account(id_user,address)
+        if  user_name:
+            self.add_member_group(id_group,id_user,role,level,address)
+            self.add_member_account(id_user,id_group, group_name, group_type, str(self.user_key),size,address)
+            return True
+        return False
+
+    def add_member_group(self,id_group,id_user,role,level,address=None):
+        if not address: address = self.server_addr
+        data = {"message": ADD_MEMBER_GROUP, "ip": "127.0.0.1", "port": "5557", "user_key": self.user_key, "id_group": id_group, "id_user": id_user,"role": role, "level": level  }
+        print(f"Sending ADD_MEMBER_GROUP request to {str(address)}")
+        send_request(address,data=data)
+
+    def add_member_account(self,id_user, id_group, group_name, group_type, ref, size,address=None):
+        if not address: address = self.server_addr
+        data = {"message": ADD_MEMBER_ACCOUNT, "ip": "127.0.0.1", "port": "5557", "user_key": id_user, "id_group": id_group, "group_name": group_name, "group_type": group_type, "id_ref": ref, "size": size  }
+        print(f"Sending ADD_MEMBER_ACCOUNT request to {str(address)}")
+        send_request(address,data=data)
+
+    def get_inferior_members(self, id_creator, id_group,id_user,address=None):
+        if not address: address = self.server_addr
+        request = GET_HIERARCHICAL_MEMBERS
+        data = {"message": request, "ip": "127.0.0.1", "port": "5557", "user_key": id_creator, "id_group": id_group,"id_user": id_user, "sender_addr": self.addr  }
+        print(f"Sending GET_HIERARCHICAL_MEMBERS request to {str(address)}")
+        send_request(address,data=data)
+        data = self.recieve_data(request) 
+        return data["ids"],data["roles"]
+
+    def get_equal_members(self, id_creator, id_group,address=None):
+        if not address: address = self.server_addr
+        request = GET_NON_HIERARCHICAL_MEMBERS
+        data = {"message": request, "ip": "127.0.0.1", "port": "5557", "user_key": id_creator, "id_group": id_group, "sender_addr": self.addr  }
+        print(f"Sending GET_NON_HIERARCHICAL_MEMBERS request to {str(address)}")
+        send_request(address,data=data)
+        data = self.recieve_data(request) 
+        return data["ids"]
+        
+    def get_member_events(self, id_member, address=None):
+        id_member = int(id_member)
+        if not address: address = self.server_addr
+        return self.get_all_events(id_member,True,address)

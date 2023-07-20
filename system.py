@@ -1,6 +1,6 @@
 import os
 import platform
-from app import *
+from client import *
 
 class System:
     operative_system = platform.system()
